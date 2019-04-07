@@ -109,6 +109,11 @@ static bool handle_http_request(int sockfd)
     if (*curr == ' ')
         if (method == GET)
         {
+            if (strncmp(curr, "start=Start", 11) == 0)
+            {
+                printf("is start start mort");
+            }
+            printf("%s\n", curr);
             get_request(buff,sockfd, "1_welcome.html");
         }
         else if (method == POST)
