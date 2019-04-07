@@ -37,6 +37,34 @@ typedef enum
     UNKNOWN
 } METHOD;
 
+bool get_request(char* buff, int sockfd, char* file_name){
+    // get the size of the file
+    struct stat st;
+    stat(file_name, &st);
+    int n = sprintf(buff, HTTP_200_FORMAT, st.st_size);
+    // send the header first
+    if (write(sockfd, buff, n) < 0)
+    {
+        perror("write");
+        return false;
+    }
+    // send the file
+    int filefd = open(file_name, O_RDONLY);
+    do
+    {
+        n = sendfile(sockfd, filefd, NULL, 2048);
+    }
+    while (n > 0);
+    if (n < 0)
+    {
+        perror("sendfile");
+        close(filefd);
+        return false;
+    }
+    close(filefd);
+    return true;
+}
+
 static bool handle_http_request(int sockfd)
 {
     // try to read the request
@@ -81,30 +109,7 @@ static bool handle_http_request(int sockfd)
     if (*curr == ' ')
         if (method == GET)
         {
-            // get the size of the file
-            struct stat st;
-            stat("lab6-GET.html", &st);
-            n = sprintf(buff, HTTP_200_FORMAT, st.st_size);
-            // send the header first
-            if (write(sockfd, buff, n) < 0)
-            {
-                perror("write");
-                return false;
-            }
-            // send the file
-            int filefd = open("lab6-GET.html", O_RDONLY);
-            do
-            {
-                n = sendfile(sockfd, filefd, NULL, 2048);
-            }
-            while (n > 0);
-            if (n < 0)
-            {
-                perror("sendfile");
-                close(filefd);
-                return false;
-            }
-            close(filefd);
+            get_request(buff,sockfd, "1_welcome.html");
         }
         else if (method == POST)
         {
@@ -117,7 +122,7 @@ static bool handle_http_request(int sockfd)
 
             // get the size of the file
             struct stat st;
-            stat("lab6-POST.html", &st);
+            stat("2_start.html", &st);
             // increase file size to accommodate the username
             long size = st.st_size + added_length;
             n = sprintf(buff, HTTP_200_FORMAT, size);
@@ -128,7 +133,7 @@ static bool handle_http_request(int sockfd)
                 return false;
             }
             // read the content of the HTML file
-            int filefd = open("lab6-POST.html", O_RDONLY);
+            int filefd = open("2_start.html", O_RDONLY);
             n = read(filefd, buff, 2048);
             if (n < 0)
             {
