@@ -67,8 +67,7 @@ bool get_request(char* buff, int sockfd, char* file_name){
 
 static bool handle_http_request(int sockfd)
 {
-	printf("handle the request");    
-// try to read the request
+    // try to read the request
     char buff[2049];
     int n = read(sockfd, buff, 2049);
     if (n <= 0)
@@ -106,20 +105,24 @@ static bool handle_http_request(int sockfd)
     // sanitise the URI
     while (*curr == '.' || *curr == '/')
         ++curr;
+	printf("%s\n\n", curr);
+  printf("THE CURR IS %d\n", curr[0]);
+   if (strncmp(curr, "?start=Start", 12)  == 0){
+	printf("matches start");
+	if (method == GET){
+        	get_request(buff,sockfd, "3_first_turn.html");
+	}
+    }
     // assume the only valid request URI is "/" but it can be modified to accept more files
-    if (*curr == ' ')
+    else if (*curr == ' ')
         if (method == GET)
-        {	printf("**************CURRRRRR   %s   ************\n", curr);
-            	if (strncmp(curr, "start=Start", 11) == 0)
-	            {
-	                printf("is start start mort");
-	            }
-		get_request(buff,sockfd, "1_welcome.html");
+        {
+            printf("%s\n", curr);
+            get_request(buff,sockfd, "1_welcome.html");
         }
         else if (method == POST)
         {
-           // printf("THIS IS THE POST REQUEST: %s\n", curr);
-		// locate the username, it is safe to do so in this sample code, but usually the result is expected to be
+            // locate the username, it is safe to do so in this sample code, but usually the result is expected to be
             // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
             char * username = strstr(buff, "user=") + 5;
             int username_length = strlen(username);
