@@ -65,6 +65,54 @@ bool get_request(char* buff, int sockfd, char* file_name){
     return true;
 }
 
+bool post_request(char *buff, int sockfd, char* file_name){
+	// locate the username, it is safe to do so in this sample code, but usually the result is expected to be
+            // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
+            char * username = strstr(buff, "user=") + 5;
+            int username_length = strlen(username);
+            // the length needs to include the ", " before the username
+            long added_length = username_length + 2;
+
+            // get the size of the file
+            struct stat st;
+            stat(file_name, &st);
+            // increase file size to accommodate the username
+            long size = st.st_size + added_length;
+            int n = sprintf(buff, HTTP_200_FORMAT, size);
+            // send the header first
+            if (write(sockfd, buff, n) < 0)
+            {
+                perror("write");
+                return false;
+            }
+            // read the content of the HTML file
+            int filefd = open(file_name, O_RDONLY);
+            n = read(filefd, buff, 2048);
+            if (n < 0)
+            {
+                perror("read");
+                close(filefd);
+                return false;
+            }
+            close(filefd);
+            // move the trailing part backward
+            int p1, p2;
+            for (p1 = size - 1, p2 = p1 - added_length; p1 >= size - 25; --p1, --p2)
+                buff[p1] = buff[p2];
+            ++p2;
+            // put the separator
+            buff[p2++] = ',';
+            buff[p2++] = ' ';
+            // copy the username
+            strncpy(buff + p2, username, username_length);
+            if (write(sockfd, buff, size) < 0)
+            {
+                perror("write");
+                return false;
+            }
+	return true;
+}
+
 static bool handle_http_request(int sockfd)
 {
     // try to read the request
@@ -105,8 +153,8 @@ static bool handle_http_request(int sockfd)
     // sanitise the URI
     while (*curr == '.' || *curr == '/')
         ++curr;
-	printf("%s\n\n", curr);
-  printf("THE CURR IS %d\n", curr[0]);
+	
+printf("**************THE CURR IS %s\n\n\n", curr);
    if (strncmp(curr, "?start=Start", 12)  == 0){
 	printf("matches start");
 	if (method == GET){
@@ -122,61 +170,18 @@ static bool handle_http_request(int sockfd)
         }
         else if (method == POST)
         {
-            // locate the username, it is safe to do so in this sample code, but usually the result is expected to be
-            // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
-            char * username = strstr(buff, "user=") + 5;
-            int username_length = strlen(username);
-            // the length needs to include the ", " before the username
-            long added_length = username_length + 2;
-
-            // get the size of the file
-            struct stat st;
-            stat("2_start.html", &st);
-            // increase file size to accommodate the username
-            long size = st.st_size + added_length;
-            n = sprintf(buff, HTTP_200_FORMAT, size);
-            // send the header first
-            if (write(sockfd, buff, n) < 0)
-            {
-                perror("write");
-                return false;
-            }
-            // read the content of the HTML file
-            int filefd = open("2_start.html", O_RDONLY);
-            n = read(filefd, buff, 2048);
-            if (n < 0)
-            {
-                perror("read");
-                close(filefd);
-                return false;
-            }
-            close(filefd);
-            // move the trailing part backward
-            int p1, p2;
-            for (p1 = size - 1, p2 = p1 - added_length; p1 >= size - 25; --p1, --p2)
-                buff[p1] = buff[p2];
-            ++p2;
-            // put the separator
-            buff[p2++] = ',';
-            buff[p2++] = ' ';
-            // copy the username
-            strncpy(buff + p2, username, username_length);
-            if (write(sockfd, buff, size) < 0)
-            {
-                perror("write");
-                return false;
-            }
+		post_request(buff,sockfd, "2_start.html");    
         }
         else
             // never used, just for completeness
-            fprintf(stderr, "no other methods supported");
-    // send 404
+            fprintf(stderr, "no other methods supported");    
+    // send 404	
     else if (write(sockfd, HTTP_404, HTTP_404_LENGTH) < 0)
     {
         perror("write");
         return false;
     }
-
+	
     return true;
 }
 
