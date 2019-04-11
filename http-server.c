@@ -130,7 +130,6 @@ static bool handle_http_request(int sockfd)
 
     // parse the method
     printf("cur is:      %s\n\n", curr);
-    METHOD method = UNKNOWN;
     Request* req = parse_request(curr);
     printf("%s\n%s\n", req->url, req->version);
     if (strncmp(req->url, "?start=Start", 12)  == 0){
