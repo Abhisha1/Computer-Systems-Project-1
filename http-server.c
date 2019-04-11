@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "http-parser.h"
 
 // constants
 static char const * const HTTP_200_FORMAT = "HTTP/1.1 200 OK\r\n\
@@ -29,13 +30,7 @@ static int const HTTP_400_LENGTH = 47;
 static char const * const HTTP_404 = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 static int const HTTP_404_LENGTH = 45;
 
-// represents the types of method
-typedef enum
-{
-    GET,
-    POST,
-    UNKNOWN
-} METHOD;
+
 
 bool get_request(char* buff, int sockfd, char* file_name){
     // get the size of the file
@@ -68,7 +63,7 @@ bool get_request(char* buff, int sockfd, char* file_name){
 bool post_request(char *buff, int sockfd, char* file_name){
 	// locate the username, it is safe to do so in this sample code, but usually the result is expected to be
             // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
-            char * username = strstr(buff, "user=") + 5;
+            char * username = strcpy(buff, "user=") + 5;
             int username_length = strlen(username);
             // the length needs to include the ", " before the username
             long added_length = username_length + 2;
@@ -113,6 +108,7 @@ bool post_request(char *buff, int sockfd, char* file_name){
 	return true;
 }
 
+
 static bool handle_http_request(int sockfd)
 {
     // try to read the request
@@ -133,46 +129,28 @@ static bool handle_http_request(int sockfd)
     char * curr = buff;
 
     // parse the method
+    printf("cur is:      %s\n\n", curr);
     METHOD method = UNKNOWN;
-    if (strncmp(curr, "GET ", 4) == 0)
-    {
-        curr += 4;
-        method = GET;
-    }
-    else if (strncmp(curr, "POST ", 5) == 0)
-    {
-        curr += 5;
-        method = POST;
-    }
-    else if (write(sockfd, HTTP_400, HTTP_400_LENGTH) < 0)
-    {
-        perror("write");
-        return false;
-    }
-
-    // sanitise the URI
-    while (*curr == '.' || *curr == '/')
-        ++curr;
-	
-printf("**************THE CURR IS %s\n\n\n", curr);
-   if (strncmp(curr, "?start=Start", 12)  == 0){
-	printf("matches start");
-	if (method == GET){
-        	get_request(buff,sockfd, "3_first_turn.html");
-	}
+    Request* req = parse_request(curr);
+    printf("%s\n%s\n", req->url, req->version);
+    if (strncmp(req->url, "?start=Start", 12)  == 0){
+        printf("matches start");
+        if (req->method == GET){
+                get_request(buff,sockfd, "3_first_turn.html");
+        }
+        if (req->method == POST){
+                post_request(buff,sockfd, "7_gameover.html");
+        }
     }
     // assume the only valid request URI is "/" but it can be modified to accept more files
-    else if (*curr == ' ')
-        if (method == GET)
+
+    else if (*req->url == '/')
+        if (req->method == GET)
         {
-            if (strncmp(curr, "start=Start", 11) == 0)
-            {
-                printf("is start start mort");
-            }
             printf("%s\n", curr);
             get_request(buff,sockfd, "1_welcome.html");
         }
-        else if (method == POST)
+        else if (req->method == POST)
         {
 		post_request(buff,sockfd, "2_start.html");    
         }
@@ -182,10 +160,11 @@ printf("**************THE CURR IS %s\n\n\n", curr);
     // send 404	
     else if (write(sockfd, HTTP_404, HTTP_404_LENGTH) < 0)
     {
+        free_request(req);
         perror("write");
         return false;
     }
-	
+	free_request(req);
     return true;
 }
 
