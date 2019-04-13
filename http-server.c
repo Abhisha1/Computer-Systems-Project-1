@@ -20,6 +20,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "http-parser.h"
+#include "http-response.h"
+#include "user.h"
 
 // constants
 static char const * const HTTP_200_FORMAT = "HTTP/1.1 200 OK\r\n\
@@ -60,56 +62,57 @@ bool get_request(char* buff, int sockfd, char* file_name){
     return true;
 }
 
-bool post_request(char *buff, int sockfd, char* file_name){
+bool post_request(char *buff, int sockfd, char* file_name, char* response){
 	// locate the username, it is safe to do so in this sample code, but usually the result is expected to be
-            // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
-            char * username = strcpy(buff, "user=") + 5;
-            int username_length = strlen(username);
-            // the length needs to include the ", " before the username
-            long added_length = username_length + 2;
+    // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
+    printf("USERNAME IS %s\n\n", buff);
+    char * username = strcpy(buff, "user=") + 5;
+    int username_length = strlen(username);
+    // the length needs to include the ", " before the username
+    long added_length = username_length + 2;
 
-            // get the size of the file
-            struct stat st;
-            stat(file_name, &st);
-            // increase file size to accommodate the username
-            long size = st.st_size + added_length;
-            int n = sprintf(buff, HTTP_200_FORMAT, size);
-            // send the header first
-            if (write(sockfd, buff, n) < 0)
-            {
-                perror("write");
-                return false;
-            }
-            // read the content of the HTML file
-            int filefd = open(file_name, O_RDONLY);
-            n = read(filefd, buff, 2048);
-            if (n < 0)
-            {
-                perror("read");
-                close(filefd);
-                return false;
-            }
-            close(filefd);
-            // move the trailing part backward
-            int p1, p2;
-            for (p1 = size - 1, p2 = p1 - added_length; p1 >= size - 25; --p1, --p2)
-                buff[p1] = buff[p2];
-            ++p2;
-            // put the separator
-            buff[p2++] = ',';
-            buff[p2++] = ' ';
-            // copy the username
-            strncpy(buff + p2, username, username_length);
-            if (write(sockfd, buff, size) < 0)
-            {
-                perror("write");
-                return false;
-            }
+    // get the size of the file
+    struct stat st;
+    stat(file_name, &st);
+    // increase file size to accommodate the username
+    long size = st.st_size + added_length;
+    int n = sprintf(buff, response, size);
+    // send the header first
+    if (write(sockfd, buff, n) < 0)
+    {
+        perror("write");
+        return false;
+    }
+    // read the content of the HTML file
+    int filefd = open(file_name, O_RDONLY);
+    n = read(filefd, buff, 2048);
+    if (n < 0)
+    {
+        perror("read");
+        close(filefd);
+        return false;
+    }
+    close(filefd);
+    // move the trailing part backward
+    int p1, p2;
+    for (p1 = size - 1, p2 = p1 - added_length; p1 >= size - 25; --p1, --p2)
+        buff[p1] = buff[p2];
+    ++p2;
+    // put the separator
+    buff[p2++] = ',';
+    buff[p2++] = ' ';
+    // copy the username
+    strncpy(buff + p2, username, username_length);
+    if (write(sockfd, buff, size) < 0)
+    {
+        perror("write");
+        return false;
+    }
 	return true;
 }
 
 
-static bool handle_http_request(int sockfd)
+static bool handle_http_request(int sockfd, User_list* users)
 {
     // try to read the request
     char buff[2049];
@@ -129,16 +132,37 @@ static bool handle_http_request(int sockfd)
     char * curr = buff;
 
     // parse the method
-    printf("cur is:      %s\n\n", curr);
     Request* req = parse_request(curr);
-    printf("%s\n%s\n", req->url, req->version);
-    if (strncmp(req->url, "?start=Start", 12)  == 0){
+    printf("REQUEST BODY IS \n\n%s\n", req->body);
+    if (strncmp(req->url, "/welcome_page?start=Start", 24)  == 0){
         printf("matches start");
         if (req->method == GET){
                 get_request(buff,sockfd, "3_first_turn.html");
         }
         if (req->method == POST){
-                post_request(buff,sockfd, "7_gameover.html");
+            Response* response = redirect(req, "gameover_page");
+            
+            char *resp = parse_response(response);
+		    post_request(buff,sockfd, "7_gameover.html",resp); 
+            free(response);
+        }
+    }
+    else if (strncmp(req->url, "/gameover_page", 14) == 0){
+        if(req->method == GET){
+            get_request(buff,sockfd, "7_gameover.html");
+            printf("i return false\n");
+        }
+    }
+    else if (strncmp(req->url, "/welcome_page", 13) == 0){
+        if(req->method == GET){
+            get_request(buff,sockfd, "2_start.html");
+        }
+        if (req->method == POST){
+            Response* response = redirect(req, "gameover_page");
+            
+            char *resp = parse_response(response);
+		    post_request(buff,sockfd, "7_gameover.html",resp); 
+            free(response);
         }
     }
     // assume the only valid request URI is "/" but it can be modified to accept more files
@@ -146,12 +170,24 @@ static bool handle_http_request(int sockfd)
     else if (*req->url == '/')
         if (req->method == GET)
         {
-            printf("%s\n", curr);
             get_request(buff,sockfd, "1_welcome.html");
         }
         else if (req->method == POST)
         {
-		post_request(buff,sockfd, "2_start.html");    
+            char *name = strchr(req->body, '=')+1;
+            printf("**%s**\n", name);
+            if (name != NULL){
+                // for (int i=0; i < users->n_users; i++){
+                //     if(users->users[i]->name == NULL){
+                //         users->users[i]->name = name;
+                //     }
+                // }
+                Response* response = redirect(req, "welcome_page");
+                char *resp = parse_response(response);
+                post_request(buff,sockfd, "2_start.html",resp); 
+                free(resp);
+                free(response);   
+            }
         }
         else
             // never used, just for completeness
@@ -215,7 +251,6 @@ int main(int argc, char * argv[])
     FD_SET(sockfd, &masterfds);
     // record the maximum socket number
     int maxfd = sockfd;
-
     while (1)
     {
         // monitor file descriptors
@@ -225,9 +260,9 @@ int main(int argc, char * argv[])
             perror("select");
             exit(EXIT_FAILURE);
         }
-
+        User_list* users = initialise_player_list();
         // loop all possible descriptor
-        for (int i = 0; i <= maxfd; ++i)
+        for (int i = 0; i <= maxfd; ++i){
             // determine if the current file descriptor is active
             if (FD_ISSET(i, &readfds))
             {
@@ -257,12 +292,14 @@ int main(int argc, char * argv[])
                     }
                 }
                 // a request is sent from the client
-                else if (!handle_http_request(i))
+                else if (!handle_http_request(i, users))
                 {
                     close(i);
                     FD_CLR(i, &masterfds);
                 }
             }
+        }
+    free(users);
     }
 
     return 0;

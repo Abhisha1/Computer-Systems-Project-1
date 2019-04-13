@@ -2,7 +2,7 @@ CC     = gcc
 CFLAGS = -Wall -std=c99 -g
 # modify the flags here ^
 EXE    = image_tagger
-OBJ    = hashtable.o http-parser.o http-response.o http-server.o
+OBJ    = hashtable.o user.o http-parser.o http-response.o http-server.o
 # add any new object files here ^
 # top (default) target
 all: $(EXE)
@@ -14,7 +14,7 @@ $(EXE): $(OBJ)
 # other dependencies
 http-parser.o: http-parser.h hashtable.h
 http-response.o: http-response.h http-parser.h hashtable.h
-http-server.o: http-parser.h
+http-server.o: http-parser.h user.h
 
 # ^ add any new dependencies here (for example if you add new modules)
 

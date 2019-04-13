@@ -11,4 +11,6 @@ typedef struct Response {
 
 
 //Creates a new hash table of input size
-Response *redirect(Request *req);
+Response *redirect(Request *req, char* url_string);
+
+char* parse_response(Response* response);

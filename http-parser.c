@@ -33,7 +33,7 @@ Request* parse_request(char* request_message){
     char header_field_name[MAX_HEADER_SIZE];
     char header_value[MAX_HEADER_SIZE];
     while(*request_message != '\r' && *request_message != '\n'){
-        printf("req message first char %d\n", *request_message);
+       printf("req message first char %d\n", *request_message);
        strcpy(header_field_name,strtok(request_message, " "));
        printf("header field name: %s\n", header_field_name);
        request_message += strcspn(request_message, " ")+1;
@@ -42,6 +42,7 @@ Request* parse_request(char* request_message){
        request_message += strcspn(request_message, "\r\n")+2;
        hash_table_put(req->header, header_field_name, header_value);
     }
+    request_message += strcspn(request_message, "\r\n")+2;
     if(*request_message != '\r'||*request_message != '\n'){
         req->body = request_message;
     }
