@@ -22,3 +22,5 @@ char* hash_table_get(HashTable *table, char *key);
 
 //Checks if the key exists in hash table
 bool hash_table_has(HashTable *table, char *key);
+
+char* print_hash_map(HashTable *table);

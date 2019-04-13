@@ -14,3 +14,8 @@ typedef struct Response {
 Response *redirect(Request *req, char* url_string);
 
 char* parse_response(Response* response);
+
+char* cookie_generator();
+
+
+Response* initialise_session(Request* request);

@@ -33,7 +33,37 @@ static char const * const HTTP_404 = "HTTP/1.1 404 Not Found\r\nContent-Length: 
 static int const HTTP_404_LENGTH = 45;
 
 
-
+bool player_session(char* buff, int sockfd, char* file_name, char* response){
+    // get the size of the file
+    printf("runnning player session functin\n");
+    struct stat st;
+    stat(file_name, &st);
+    int n = sprintf(buff, response, st.st_size);
+    // send the header first
+    printf("sending header\n");
+    if (write(sockfd, buff, n) < 0)
+    {
+        perror("write");
+        return false;
+    }
+    // send the file
+    printf("sending file\n");
+    int filefd = open(file_name, O_RDONLY);
+    do
+    {
+        n = sendfile(sockfd, filefd, NULL, 2048);
+    }
+    while (n > 0);
+    if (n < 0)
+    {
+        perror("sendfile");
+        close(filefd);
+        return false;
+    }
+    printf("about to close");
+    close(filefd);
+    return true;
+}
 bool get_request(char* buff, int sockfd, char* file_name){
     // get the size of the file
     struct stat st;
@@ -165,14 +195,8 @@ static bool handle_http_request(int sockfd, User_list* users)
             free(response);
         }
     }
-    // assume the only valid request URI is "/" but it can be modified to accept more files
-
-    else if (*req->url == '/')
-        if (req->method == GET)
-        {
-            get_request(buff,sockfd, "1_welcome.html");
-        }
-        else if (req->method == POST)
+    else if (*req->url == '/' && (strlen(req->url) == 1)){
+        if (req->method == POST)
         {
             char *name = strchr(req->body, '=')+1;
             printf("**%s**\n", name);
@@ -189,9 +213,21 @@ static bool handle_http_request(int sockfd, User_list* users)
                 free(response);   
             }
         }
+        else if (req->method == GET)
+        {
+            printf("matches a / url but url isize is %zu\n\n", strlen(req->url));
+            Response* resp = initialise_session(req);
+            char* resp_string = parse_response(resp);
+            printf("COOKIE CREATING RESP %s\n", resp_string);
+            // player_session(buff, sockfd, "1_welcome.html", resp_string);
+            free(resp_string);
+            free(resp); 
+           get_request(buff,sockfd, "1_welcome.html");
+        }
         else
             // never used, just for completeness
-            fprintf(stderr, "no other methods supported");    
+            fprintf(stderr, "no other methods supported");   
+    } 
     // send 404	
     else if (write(sockfd, HTTP_404, HTTP_404_LENGTH) < 0)
     {

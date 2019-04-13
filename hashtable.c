@@ -174,3 +174,16 @@ bool hash_table_has(HashTable *table, char *key) {
 	}
 	return false;
 }
+char* print_hash_map(HashTable *table){
+	char* headers = malloc(100*sizeof(char));
+	for (int i = 0; i < table->size; i++) {
+		if (table->buckets[i].n_elems > 0){
+			for (int j=0; j< table->buckets[i].n_elems; j++){
+				strcat(headers, table->buckets[i].keys[j]);
+				strcat(headers, table->buckets[i].values[j]);
+				strcat(headers, "\r\n");
+			}
+		}
+	}
+	return headers;
+}

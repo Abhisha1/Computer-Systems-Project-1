@@ -7,7 +7,7 @@
 #include "http-parser.h"
 
 #define MAX_URL_SIZE 60
-#define MAX_HEADER_SIZE 300
+#define MAX_HEADER_SIZE 600
 #define MAX_VERSION_SIZE 10
 
 Request* parse_request(char* request_message){
