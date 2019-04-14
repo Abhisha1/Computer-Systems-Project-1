@@ -38,7 +38,7 @@ void resize_keywords(User* user, char* keyword){
 }
 
 
-void add_keyword(int id, User_list* users, char* query){
+char* add_keyword(int id, User_list* users, char* query){
     const char s[2] = "&";
     char * curr = query;
     char * token;
@@ -50,6 +50,7 @@ void add_keyword(int id, User_list* users, char* query){
             resize_keywords(users->users[i], token);
         }
     }
+    return token;
 }
 
 void add_user(User* user, User_list* users){
@@ -97,4 +98,43 @@ void change_player_status(int user_id, User_list* users, STATUS status){
             users->users[i]->status = status;
         }
     }
+}
+
+bool keyword_match(User* user, char* keyword){
+    for(int i=0; user->n_keywords;i++){
+        if(strcmp(keyword, user->keywords[i]) == 0){
+            return true;
+        }
+    }
+    return false;
+}
+
+void reset_players(User_list *users){
+    for(int i=0; i< users->n_users;i++){
+        users->users[i]->n_keywords = 0;
+        users->users[i]->n_capacity = 5;
+        free(users->users[i]->keywords);
+        users->users[i]->keywords = malloc(sizeof(char*)*users->users[i]->n_capacity);
+    }
+}
+
+bool has_match_ended(User_list* users, char* keyword){
+    for(int i=0; i< users->n_users;i++){
+        if(users->users[i]->status == READY){
+            if(keyword_match(users->users[i], keyword)){
+                reset_players(users);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool player_won(User_list *users){
+    for(int i=0; i < users->n_users; i++){
+        if (users->users[i]->status == COMPLETE){
+            return true;
+        }
+    }
+    return false;
 }

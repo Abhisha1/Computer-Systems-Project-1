@@ -3,7 +3,8 @@ typedef enum
 {
     READY,
     WAIT,
-    QUIT
+    QUIT,
+    COMPLETE
 } STATUS;
 
 
@@ -27,7 +28,7 @@ User_list* initialise_player_list();
 
 void resize_keywords(User* user, char* keyword);
 
-void add_keyword(int id, User_list* users, char* query);
+char* add_keyword(int id, User_list* users, char* query);
 
 void add_user(User* user, User_list* users);
 
@@ -40,3 +41,11 @@ bool should_player_quit(User_list* users);
 bool players_ready(User_list* users);
 
 void change_player_status(int user_id, User_list* users, STATUS status);
+
+bool keyword_match(User* user, char* keyword);
+
+void reset_players(User_list *users);
+
+bool has_match_ended(User_list* users, char* keyword);
+
+bool player_won(User_list *users);

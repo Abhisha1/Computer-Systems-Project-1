@@ -180,27 +180,34 @@ static bool handle_http_request(int sockfd, User_list* users)
             if(strncmp(req->body, "keyword=", 8)  == 0){
                 printf("strncmp with keywoprds is successful");
                 printf("the numer of users is %d\n", users->n_users);
-                // for(int i=0; i < users->n_users; i++){
-                //     printf("USER ID %d", users->users[i]->id);
-                //     if(users->users[i]->status == READY){
-                //         printf("is ready\n");
-                //     }
-                //     if(users->users[i]->status == WAIT){
-                //         printf("is wait\n");
-                //     }
-                //     if(users->users[i]->status == QUIT){
-                //         printf("is quit\n");
-                //     }
-                // }
-                if(players_ready(users)){
-                    post_request(buff,sockfd, "5_discarded.html");
+                for(int i=0; i < users->n_users; i++){
+                    printf("USER ID %d", users->users[i]->id);
+                    if(users->users[i]->status == READY){
+                        printf("is ready\n");
+                    }
+                    if(users->users[i]->status == WAIT){
+                        printf("is wait\n");
+                    }
+                    if(users->users[i]->status == QUIT){
+                        printf("is quit\n");
+                    }
+                }
+                if(player_won(users)){
+                    post_request(buff,sockfd, "6_endgame.html");
                 }
                 else if(should_player_quit(users)){
                     change_player_status(sockfd,users, QUIT);
                     post_request(buff,sockfd, "7_gameover.html");
                 }
+                else if(!players_ready(users)){
+                    post_request(buff,sockfd, "5_discarded.html");
+                }
                 else{
-                    add_keyword(sockfd, users, req->body);
+                    char* keyword = add_keyword(sockfd, users, req->body);
+                    if(has_match_ended(users, keyword)){
+                        change_player_status(sockfd, users, COMPLETE);
+                        post_request(buff,sockfd, "6_endgame.html");
+                    }
                     post_request(buff,sockfd, "4_accepted.html"); 
                 }
             }
@@ -234,7 +241,9 @@ static bool handle_http_request(int sockfd, User_list* users)
             // player_session(buff, sockfd, "1_welcome.html", resp_string);
             // free(resp_string);
             // free(resp); 
-           get_request(buff,sockfd, "1_welcome.html");
+            User* new_player = new_user(sockfd);
+            add_user(new_player, users);
+            get_request(buff,sockfd, "1_welcome.html");
         }
         else
             // never used, just for completeness
@@ -298,6 +307,7 @@ int main(int argc, char * argv[])
     FD_SET(sockfd, &masterfds);
     // record the maximum socket number
     int maxfd = sockfd;
+    User_list* users = initialise_player_list();
     while (1)
     {
         // monitor file descriptors
@@ -307,7 +317,6 @@ int main(int argc, char * argv[])
             perror("select");
             exit(EXIT_FAILURE);
         }
-        User_list* users = initialise_player_list();
         // loop all possible descriptor
         for (int i = 0; i <= maxfd; ++i){
             // determine if the current file descriptor is active
@@ -331,9 +340,10 @@ int main(int argc, char * argv[])
                         
                         // print out the IP and the socket number
                         char ip[INET_ADDRSTRLEN];
-                        User* new_player = new_user(sockfd);
-                        add_user(new_player, users);
-                        printf("THE NUMBER OF USERS IS %d\n", users->n_users);
+                        // User* new_player = new_user(sockfd);
+                        // add_user(new_player, users);
+                        //printf(" %d \n", users->n_users);
+                        // printf("THE NUMBER OF USERS IS %d\n", users->n_users);
                         printf(
                             "new connection from %s on socket %d\n",
                             // convert to human readable string
@@ -350,7 +360,7 @@ int main(int argc, char * argv[])
                 }
             }
         }
-        free(users);
     }
+    free(users);
     return 0;
 }
