@@ -6,9 +6,10 @@
 #include "user.h"
 
 
-User* new_user(){
+User* new_user(char* id){
     User *user = malloc(sizeof(User*));
     assert(user);
+    user->id = id;
     user->n_capacity = 5;
     user->n_keywords = 0;
     user->status = WAIT;

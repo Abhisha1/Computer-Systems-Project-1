@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -215,13 +216,13 @@ static bool handle_http_request(int sockfd, User_list* users)
         }
         else if (req->method == GET)
         {
-            printf("matches a / url but url isize is %zu\n\n", strlen(req->url));
-            Response* resp = initialise_session(req);
-            char* resp_string = parse_response(resp);
-            printf("COOKIE CREATING RESP %s\n", resp_string);
+            // printf("matches a / url but url isize is %zu\n\n", strlen(req->url));
+            // Response* resp = initialise_session(req);
+            // char* resp_string = parse_response(resp);
+            // printf("COOKIE CREATING RESP %s\n", resp_string);
             // player_session(buff, sockfd, "1_welcome.html", resp_string);
-            free(resp_string);
-            free(resp); 
+            // free(resp_string);
+            // free(resp); 
            get_request(buff,sockfd, "1_welcome.html");
         }
         else
@@ -270,7 +271,13 @@ int main(int argc, char * argv[])
     // if ip parameter is not specified
     serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
     serv_addr.sin_port = htons(atoi(argv[2]));
-
+    char *user_id = malloc(sizeof(char)*(strlen(argv[1])+strlen(argv[2])));
+    user_id[0] = '\0';
+    strcat(user_id,argv[1]);
+    strcat(user_id,argv[2]);
+    printf("%s\n\n\\n", user_id);
+    assert(user_id);
+    free(user_id);
     // bind address to socket
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {

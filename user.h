@@ -8,6 +8,7 @@ typedef enum
 
 typedef struct User {
     char* name;
+    char* id;
     char** keywords;
     int n_keywords;
     STATUS status;
@@ -19,7 +20,7 @@ typedef struct User_list{
     User **users;
 }User_list;
 
-User* new_user();
+User* new_user(char* id);
 
 User_list* initialise_player_list();
 
