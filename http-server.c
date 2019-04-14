@@ -93,7 +93,7 @@ bool get_request(char* buff, int sockfd, char* file_name){
     return true;
 }
 
-bool post_request(char *buff, int sockfd, char* file_name, char* response){
+bool post_request(char *buff, int sockfd, char* file_name){
 	// locate the username, it is safe to do so in this sample code, but usually the result is expected to be
     // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
     printf("USERNAME IS %s\n\n", buff);
@@ -107,7 +107,7 @@ bool post_request(char *buff, int sockfd, char* file_name, char* response){
     stat(file_name, &st);
     // increase file size to accommodate the username
     long size = st.st_size + added_length;
-    int n = sprintf(buff, response, size);
+    int n = sprintf(buff, HTTP_200_FORMAT, size);
     // send the header first
     if (write(sockfd, buff, n) < 0)
     {
@@ -146,6 +146,7 @@ bool post_request(char *buff, int sockfd, char* file_name, char* response){
 static bool handle_http_request(int sockfd, User_list* users)
 {
     // try to read the request
+    printf("THE NUMBER OF USERS IS (in http req) %d\n", users->n_users);
     char buff[2049];
     int n = read(sockfd, buff, 2049);
     if (n <= 0)
@@ -165,35 +166,49 @@ static bool handle_http_request(int sockfd, User_list* users)
     // parse the method
     Request* req = parse_request(curr);
     printf("REQUEST BODY IS \n\n%s\n", req->body);
-    if (strncmp(req->url, "/welcome_page?start=Start", 24)  == 0){
+    if(strncmp(req->body, "quit=Quit", 9)  == 0){
+        change_player_status(sockfd,users, QUIT);
+        post_request(buff,sockfd, "7_gameover.html");
+    }
+    if (strncmp(req->url, "/?start=Start", 24)  == 0){
         printf("matches start");
         if (req->method == GET){
-                get_request(buff,sockfd, "3_first_turn.html");
+            change_player_status(sockfd, users, READY);
+            get_request(buff,sockfd, "3_first_turn.html");
         }
         if (req->method == POST){
-            Response* response = redirect(req, "gameover_page");
-            
-            char *resp = parse_response(response);
-		    post_request(buff,sockfd, "7_gameover.html",resp); 
-            free(response);
-        }
-    }
-    else if (strncmp(req->url, "/gameover_page", 14) == 0){
-        if(req->method == GET){
-            get_request(buff,sockfd, "7_gameover.html");
-            printf("i return false\n");
+            if(strncmp(req->body, "keyword=", 8)  == 0){
+                printf("strncmp with keywoprds is successful");
+                printf("the numer of users is %d\n", users->n_users);
+                // for(int i=0; i < users->n_users; i++){
+                //     printf("USER ID %d", users->users[i]->id);
+                //     if(users->users[i]->status == READY){
+                //         printf("is ready\n");
+                //     }
+                //     if(users->users[i]->status == WAIT){
+                //         printf("is wait\n");
+                //     }
+                //     if(users->users[i]->status == QUIT){
+                //         printf("is quit\n");
+                //     }
+                // }
+                if(players_ready(users)){
+                    post_request(buff,sockfd, "5_discarded.html");
+                }
+                else if(should_player_quit(users)){
+                    change_player_status(sockfd,users, QUIT);
+                    post_request(buff,sockfd, "7_gameover.html");
+                }
+                else{
+                    add_keyword(sockfd, users, req->body);
+                    post_request(buff,sockfd, "4_accepted.html"); 
+                }
+            }
         }
     }
     else if (strncmp(req->url, "/welcome_page", 13) == 0){
         if(req->method == GET){
             get_request(buff,sockfd, "2_start.html");
-        }
-        if (req->method == POST){
-            Response* response = redirect(req, "gameover_page");
-            
-            char *resp = parse_response(response);
-		    post_request(buff,sockfd, "7_gameover.html",resp); 
-            free(response);
         }
     }
     else if (*req->url == '/' && (strlen(req->url) == 1)){
@@ -202,16 +217,12 @@ static bool handle_http_request(int sockfd, User_list* users)
             char *name = strchr(req->body, '=')+1;
             printf("**%s**\n", name);
             if (name != NULL){
-                // for (int i=0; i < users->n_users; i++){
-                //     if(users->users[i]->name == NULL){
-                //         users->users[i]->name = name;
-                //     }
-                // }
-                Response* response = redirect(req, "welcome_page");
-                char *resp = parse_response(response);
-                post_request(buff,sockfd, "2_start.html",resp); 
-                free(resp);
-                free(response);   
+                 for (int i=0; i < users->n_users; i++){
+                     if(users->users[i]->id == sockfd){
+                         users->users[i]->name = name;
+                     }
+                 }
+                post_request(buff,sockfd, "2_start.html");
             }
         }
         else if (req->method == GET)
@@ -271,13 +282,6 @@ int main(int argc, char * argv[])
     // if ip parameter is not specified
     serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
     serv_addr.sin_port = htons(atoi(argv[2]));
-    char *user_id = malloc(sizeof(char)*(strlen(argv[1])+strlen(argv[2])));
-    user_id[0] = '\0';
-    strcat(user_id,argv[1]);
-    strcat(user_id,argv[2]);
-    printf("%s\n\n\\n", user_id);
-    assert(user_id);
-    free(user_id);
     // bind address to socket
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
@@ -324,8 +328,12 @@ int main(int argc, char * argv[])
                         // update the maximum tracker
                         if (newsockfd > maxfd)
                             maxfd = newsockfd;
+                        
                         // print out the IP and the socket number
                         char ip[INET_ADDRSTRLEN];
+                        User* new_player = new_user(sockfd);
+                        add_user(new_player, users);
+                        printf("THE NUMBER OF USERS IS %d\n", users->n_users);
                         printf(
                             "new connection from %s on socket %d\n",
                             // convert to human readable string
@@ -342,8 +350,7 @@ int main(int argc, char * argv[])
                 }
             }
         }
-    free(users);
+        free(users);
     }
-
     return 0;
 }
