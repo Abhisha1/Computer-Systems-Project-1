@@ -96,7 +96,6 @@ bool get_request(char* buff, int sockfd, char* file_name){
 bool post_request(char *buff, int sockfd, char* file_name){
 	// locate the username, it is safe to do so in this sample code, but usually the result is expected to be
     // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
-    printf("USERNAME IS %s\n\n", buff);
     char * username = strcpy(buff, "user=") + 5;
     int username_length = strlen(username);
     // the length needs to include the ", " before the username
@@ -191,6 +190,9 @@ static bool handle_http_request(int sockfd, User_list* users)
                     if(users->users[i]->status == QUIT){
                         printf("is quit\n");
                     }
+                    if(users->users[i]->status == COMPLETE){
+                        printf("is complete\n");
+                    }
                 }
                 if(player_won(users)){
                     post_request(buff,sockfd, "6_endgame.html");
@@ -204,11 +206,13 @@ static bool handle_http_request(int sockfd, User_list* users)
                 }
                 else{
                     char* keyword = add_keyword(sockfd, users, req->body);
-                    if(has_match_ended(users, keyword)){
-                        change_player_status(sockfd, users, COMPLETE);
+                    if(has_match_ended(users, keyword, sockfd)){
                         post_request(buff,sockfd, "6_endgame.html");
+                        change_player_status(sockfd, users, COMPLETE);
                     }
-                    post_request(buff,sockfd, "4_accepted.html"); 
+                    else{
+                        post_request(buff,sockfd, "4_accepted.html");
+                    }
                 }
             }
         }

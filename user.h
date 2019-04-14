@@ -46,6 +46,6 @@ bool keyword_match(User* user, char* keyword);
 
 void reset_players(User_list *users);
 
-bool has_match_ended(User_list* users, char* keyword);
+bool has_match_ended(User_list* users, char* keyword, int id);
 
 bool player_won(User_list *users);

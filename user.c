@@ -35,15 +35,19 @@ void resize_keywords(User* user, char* keyword){
     }
     user->keywords[user->n_keywords] = keyword;
     user->n_keywords++;
+    for(int j=0; j<user->n_keywords; j++){
+        printf("%d: %s\n",j, user->keywords[j]);
+    }
 }
 
 
 char* add_keyword(int id, User_list* users, char* query){
     const char s[2] = "&";
     char * curr = query;
-    char * token;
+    char * token = malloc(sizeof(char)*20);
+    assert(token);
     curr += 8;
-    token = strtok(curr, s);
+    memcpy(token, strtok(curr, s), strlen(strtok(curr, s)));
     printf("the keywod is %s\n", token);
     for(int i=0; i < users->n_users; i++){
         if(users->users[i]->id == id){
@@ -101,8 +105,10 @@ void change_player_status(int user_id, User_list* users, STATUS status){
 }
 
 bool keyword_match(User* user, char* keyword){
-    for(int i=0; user->n_keywords;i++){
+    for(int i=0; i <user->n_keywords;i++){
+        printf("words being matched is with %s and %s\n", keyword, user->keywords[i]);
         if(strcmp(keyword, user->keywords[i]) == 0){
+            printf("match is with %s and %s\n", keyword, user->keywords[i]);
             return true;
         }
     }
@@ -111,16 +117,16 @@ bool keyword_match(User* user, char* keyword){
 
 void reset_players(User_list *users){
     for(int i=0; i< users->n_users;i++){
+        for(int j=0; j< users->users[i]->n_keywords; j++){
+            free(users->users[i]->keywords[j]);
+        }
         users->users[i]->n_keywords = 0;
-        users->users[i]->n_capacity = 5;
-        free(users->users[i]->keywords);
-        users->users[i]->keywords = malloc(sizeof(char*)*users->users[i]->n_capacity);
     }
 }
 
-bool has_match_ended(User_list* users, char* keyword){
+bool has_match_ended(User_list* users, char* keyword, int id){
     for(int i=0; i< users->n_users;i++){
-        if(users->users[i]->status == READY){
+        if(users->users[i]->status == READY && id != users->users[i]->id){
             if(keyword_match(users->users[i], keyword)){
                 reset_players(users);
                 return true;
