@@ -6,24 +6,27 @@
 
 #include "user.h"
 
+#define INITIAL_KEYWORDS 5
+#define INITAL_N_USERS 5
+#define INITIAL_KEYWORD_LENGTH 30
 
 User* new_user(int id){
-    User *user = malloc(sizeof *user);
+    User *user = calloc(1, sizeof *user);
     assert(user);
     user->id = id;
-    user->n_capacity = 5;
+    user->n_capacity = INITIAL_KEYWORDS;
     user->n_keywords = 0;
     user->status = WAIT;
-    user->keywords = malloc(sizeof(char*)*user->n_capacity);
+    user->keywords = calloc(user->n_capacity,sizeof(char*));
     assert(user->keywords);
     return user;
 }
 
 User_list* initialise_player_list(){
-    User_list *users = malloc(sizeof(User_list));
+    User_list *users = calloc(1, sizeof(User_list));
     assert(users);
     users->n_users = 0;
-    users->users = malloc(sizeof(User*)*5);
+    users->users = calloc(INITAL_N_USERS, sizeof(User*));
     assert(users->users);
     return users;
 }
@@ -44,10 +47,11 @@ void resize_keywords(User* user, char* keyword){
 char* add_keyword(int id, User_list* users, char* query){
     const char s[2] = "&";
     char * curr = query;
-    char * token = malloc(sizeof(char)*20);
+    char * token = calloc(INITIAL_KEYWORD_LENGTH, sizeof(char));
+    token[0] = '\0';
     assert(token);
     curr += 8;
-    memcpy(token, strtok(curr, s), strlen(strtok(curr, s)));
+    strcat(token, strtok(curr, s));
     printf("the keywod is %s\n", token);
     for(int i=0; i < users->n_users; i++){
         if(users->users[i]->id == id){
@@ -117,9 +121,6 @@ bool keyword_match(User* user, char* keyword){
 
 void reset_players(User_list *users){
     for(int i=0; i< users->n_users;i++){
-        for(int j=0; j< users->users[i]->n_keywords; j++){
-            free(users->users[i]->keywords[j]);
-        }
         users->users[i]->n_keywords = 0;
     }
 }
@@ -143,4 +144,14 @@ bool player_won(User_list *users){
         }
     }
     return false;
+}
+
+User* get_current_user(User_list* users, char* keyword, int id){
+    User *user = NULL;
+    for(int i=0; i < users->n_users; i++){
+        if (users->users[i]->id == id){
+            user = users->users[i];
+        }
+    }
+    return user;
 }

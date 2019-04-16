@@ -11,8 +11,9 @@
 #define MAX_VERSION_SIZE 10
 
 Request* parse_request(char* request_message){
-    Request *req = malloc(sizeof *req);
+    Request *req = calloc(1, sizeof(Request));
 	assert(req);
+    memset(req, 0, sizeof(Request));
     int n_headers = 10;
     if (strncmp(request_message, "GET ", 4) == 0){
         req->method = GET;
@@ -33,12 +34,12 @@ Request* parse_request(char* request_message){
     char header_field_name[MAX_HEADER_SIZE];
     char header_value[MAX_HEADER_SIZE];
     while(*request_message != '\r' && *request_message != '\n'){
-       printf("req message first char %d\n", *request_message);
+    //    printf("req message first char %d\n", *request_message);
        strcpy(header_field_name,strtok(request_message, " "));
-       printf("header field name: %s\n", header_field_name);
+    //    printf("header field name: %s\n", header_field_name);
        request_message += strcspn(request_message, " ")+1;
        strcpy(header_value,strtok(request_message, "\r\n"));
-       printf("header value: %s\n", header_value);
+    //    printf("header value: %s\n", header_value);
        request_message += strcspn(request_message, "\r\n")+2;
        hash_table_put(req->header, header_field_name, header_value);
     }
@@ -53,6 +54,6 @@ Request* parse_request(char* request_message){
 }
 
 void free_request(Request* req){
-    free_hash_table(req->header);
+   free_hash_table(req->header);
     free(req);
 }
