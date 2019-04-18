@@ -155,3 +155,14 @@ User* get_current_user(User_list* users, char* keyword, int id){
     }
     return user;
 }
+
+char* return_all_keywords(User* user){
+    char keywords[60];
+    for(int i=0; i< user->n_keywords; i++){
+        strcat(keywords, user->keywords[i]);
+        strcat(keywords,",");
+    }
+    keywords[strlen(keywords)-1] = '\0';
+    printf("**** %s \n   ", keywords);
+    return keywords;
+}

@@ -51,3 +51,5 @@ bool has_match_ended(User_list* users, char* keyword, int id);
 bool player_won(User_list *users);
 
 User* get_current_user(User_list* users, char* keyword, int id);
+
+char* return_all_keywords(User* user);
