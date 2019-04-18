@@ -37,13 +37,10 @@ char *substring(char *string, int position, int length)
 {
    char *p;
    int c;
- 
-   p = malloc(length+1);
-   
-   if( p == NULL )
-       exit(EXIT_FAILURE);
- 
-   for( c = 0 ; c < length ; c++ )
+   p = calloc(length+1, sizeof(char));
+   assert(p);
+    printf("size of length %d\n", length);
+   for(c = 0 ; c < length ; c++ )
       *(p+c) = *((string+position-1)+c);      
        
    *(p+c) = '\0';
@@ -124,23 +121,30 @@ bool get_request(char* buff, int sockfd, char* file_name){
     return true;
 }
 
-bool post_request(char *buff, int sockfd, char* file_name){
-	// locate the username, it is safe to do so in this sample code, but usually the result is expected to be
-    // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
-    // printf("\n\n1. the bufferis: %s\n\n", buff);
-    char * username = strcpy(buff, "user=") + 5;
-    int username_length = strlen(username);
-    // the length needs to include the ", " before the username
-    long added_length = username_length + 2;
-    // printf("\n\n2. the bufferis: %s\n\n", buff);
-    // get the size of the file
+void clean_trailing_buffer(char* buff){
+    const char needle[10] = "</html>";
+    char *result = strstr(buff, needle)+strlen(needle);
+    int position = result - buff;
+    memcpy(buff, buff, position);
+}
+
+void render_text(char* buff, char* text){
+    const char new_needle[10] = "\">";
+    char* result = strstr(buff, new_needle)+strlen(new_needle);
+    int position = result - buff;
+    insert_substring(buff, text, position);
+}
+
+
+bool text_render_request(char *buff, int sockfd, char* file_name, char* text){
+    char *user_name = calloc(200,sizeof(char));
+    assert(user_name);
+    strcpy(user_name, text);
     struct stat st;
     stat(file_name, &st);
     // increase file size to accommodate the username
-    long size = st.st_size + added_length;
+    long size = st.st_size + strlen(user_name);
     int n = sprintf(buff, HTTP_200_FORMAT, size);
-    // send the header first
-    // printf("\n\n3. the bufferis: %s\n\n", buff);
     if (write(sockfd, buff, n) < 0)
     {
         perror("write");
@@ -149,11 +153,8 @@ bool post_request(char *buff, int sockfd, char* file_name){
     // read the content of the HTML file
     int filefd = open(file_name, O_RDONLY);
     n = read(filefd, buff, size);
-    const char needle[10] = "</html>";
-    char* result = strstr(buff, needle)+strlen(needle);
-    int position = result - buff;
-    memcpy(buff, buff, position);
-    // printf("\n\n4. the bufferis: %s\n\n", buff);
+    render_text(buff, user_name);
+    clean_trailing_buffer(buff);
     if (n < 0)
     {
         perror("read");
@@ -162,10 +163,7 @@ bool post_request(char *buff, int sockfd, char* file_name){
     }
     close(filefd);
     // move the trailing part backward
-    int p1, p2;
-    for (p1 = size - 1, p2 = p1 - added_length; p1 >= size - 25; --p1, --p2)
-        buff[p1] = buff[p2];
-    ++p2;
+    free(user_name);
     if (write(sockfd, buff, size) < 0)
     {
         perror("write");
@@ -174,20 +172,10 @@ bool post_request(char *buff, int sockfd, char* file_name){
 	return true;
 }
 
-bool dynamic_post_request(char *buff, int sockfd, char* file_name, User *user){
-	// locate the username, it is safe to do so in this sample code, but usually the result is expected to be
-    // copied to another buffer using strcpy or strncpy to ensure that it will not be overwritten.
-    char * username = strcpy(buff, "user=") + 5;
-    int username_length = strlen(username);
-    // the length needs to include the ", " before the username
-    long added_length = username_length + 2;
-
-    // get the size of the file
+bool post_request(char *buff, int sockfd, char* file_name){
     struct stat st;
     stat(file_name, &st);
-    // increase file size to accommodate the username
-    long size = st.st_size + added_length;
-    int n = sprintf(buff, HTTP_200_FORMAT, size);
+    int n = sprintf(buff, HTTP_200_FORMAT, st.st_size);
     // send the header first
     if (write(sockfd, buff, n) < 0)
     {
@@ -196,44 +184,16 @@ bool dynamic_post_request(char *buff, int sockfd, char* file_name, User *user){
     }
     // read the content of the HTML file
     int filefd = open(file_name, O_RDONLY);
-    n = read(filefd, buff, 2048);
-   // printf("%s\n", buff);
-    // char insert[60];
-    // strcpy(insert, "");
-    // for(int i=0; i< user->n_keywords; i++){
-    //     strcat(insert, user->keywords[i]);
-    //     strcat(insert,",");
-    // }
-    // insert[strlen(insert)-1] = '\0';
-    // printf("the html to be inserted is %s\n", insert);
-    // printf("The substring is: %s\n", ret);
-    
+    n = read(filefd, buff, st.st_size);
+    clean_trailing_buffer(buff);
     if (n < 0)
     {
         perror("read");
         close(filefd);
         return false;
     }
-    printf("dynamic %s\n", buff);
-    char* keywords = return_all_keywords(user);
-    const char needle[10] = "</html>";
-    char* result = strstr(buff, needle)+strlen(needle);
-    int position = result - buff;
-    insert_substring(buff, keywords, position);
-    memcpy(buff, buff, position);
     close(filefd);
-    // move the trailing part backward
-    // int p1, p2;
-    // for (p1 = size - 1, p2 = p1 - added_length; p1 >= size - 25; --p1, --p2)
-    //     buff[p1] = buff[p2];
-    // ++p2;
-    // // put the separator
-    // buff[p2++] = ',';
-    // buff[p2++] = ' ';
-    // // copy the username
-    strncpy(buff, username, username_length);
-    if (write(sockfd, buff, size) < 0)
-    free(keywords);
+    if (write(sockfd, buff, st.st_size) < 0)
     {
         perror("write");
         return false;
@@ -271,12 +231,14 @@ static bool handle_http_request(int sockfd, User_list *users)
     else if (strncmp(req->url, "/?start=Start", 24)  == 0){
         // printf("matches start");
         if (req->method == GET){
+            printf("first turn");
             change_player_status(sockfd, users, READY);
             get_request(buff,sockfd, "3_first_turn.html");
         }
         if (req->method == POST){
             if(strncmp(req->body, "keyword=", 8)  == 0){
                 if(player_won(users)){
+                    change_player_status(sockfd, users, COMPLETE);
                     post_request(buff,sockfd, "6_endgame.html");
                 }
                 else if(should_player_quit(users)){
@@ -294,9 +256,11 @@ static bool handle_http_request(int sockfd, User_list *users)
                     }
                     else{
                         User* user = get_current_user(users, keyword, sockfd);
-                        post_request(buff, sockfd, "4_accepted.html");
-                       // dynamic_post_request(buff,sockfd, "4_accepted.html", user);
+                        char* keywords = return_all_keywords(user);
+                        text_render_request(buff,sockfd, "4_accepted.html", keywords);
+                        free(keywords);
                     }
+                    free(keyword);
                 }
             }
         }
@@ -312,7 +276,8 @@ static bool handle_http_request(int sockfd, User_list *users)
                          users->users[i]->name = name;
                      }
                  }
-                post_request(buff,sockfd, "2_start.html");
+                // get_request(buff,sockfd, "2_start.html");
+               text_render_request(buff,sockfd, "2_start.html", req->body+5);
             }
         }
         else if (req->method == GET)
@@ -332,6 +297,13 @@ static bool handle_http_request(int sockfd, User_list *users)
             // never used, just for completeness
             fprintf(stderr, "no other methods supported");   
     } 
+    // send 404	
+    else if (write(sockfd, HTTP_404, HTTP_404_LENGTH) < 0)
+    {
+        free_request(req);
+        perror("write");
+        return false;
+    }
     printf("the numer of users is %d\n", users->n_users);
     for(int i=0; i < users->n_users; i++){
         printf("USER ID %d", users->users[i]->id);
@@ -347,13 +319,6 @@ static bool handle_http_request(int sockfd, User_list *users)
         if(users->users[i]->status == COMPLETE){
             printf("is complete\n");
         }
-    }
-    // send 404	
-    else if (write(sockfd, HTTP_404, HTTP_404_LENGTH) < 0)
-    {
-        free_request(req);
-        perror("write");
-        return false;
     }
 	free_request(req);
     return true;

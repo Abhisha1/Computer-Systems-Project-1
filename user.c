@@ -157,7 +157,9 @@ User* get_current_user(User_list* users, char* keyword, int id){
 }
 
 char* return_all_keywords(User* user){
-    char keywords[60];
+    //RETURNS ADDRESS OF LOCAL VARIABLE
+    char *keywords = calloc(user->n_keywords*(INITIAL_KEYWORD_LENGTH+1), user->n_keywords);
+    assert(keywords);
     for(int i=0; i< user->n_keywords; i++){
         strcat(keywords, user->keywords[i]);
         strcat(keywords,",");
