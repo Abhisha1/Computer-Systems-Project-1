@@ -323,8 +323,9 @@ static bool handle_http_request(int sockfd, User_list *users)
     // parse the method
     Request* req = parse_request(curr);
     User* user = get_current_user(users, sockfd);
-    // printf("REQUEST BODY IS \n\n%s\n", req->body);
+     printf("REQUEST BODY IS \n\n%s\n", req->body);
     if(strncmp(req->body, "quit=Quit", 9)  == 0){
+        printf("run\n\n\n\n\\n");
         change_player_status(sockfd,users, QUIT);
         post_request(buff,sockfd, "7_gameover.html");
     }
@@ -332,7 +333,7 @@ static bool handle_http_request(int sockfd, User_list *users)
         // printf("matches start");
         if (req->method == GET){
             change_player_status(sockfd, users, READY);
-           // int round = change_player_round(sockfd, users);
+            int round = change_player_round(sockfd, users);
             // printf("THIS IS ROUND NUMBER %d\n", round);
             get_request(buff, sockfd, "3_first_turn.html");
            // game_change(buff,sockfd, "3_first_turn.html", round);
@@ -340,8 +341,8 @@ static bool handle_http_request(int sockfd, User_list *users)
         if (req->method == POST){
             if(strncmp(req->body, "keyword=", 8)  == 0){
                 if(player_won(users)){
-                    change_player_status(sockfd, users, COMPLETE);
                     post_request(buff,sockfd, "6_endgame.html");
+                    change_all_status(users, RESTART);
                 }
                 else if(should_player_quit(users)){
                     change_player_status(sockfd,users, QUIT);
@@ -355,7 +356,7 @@ static bool handle_http_request(int sockfd, User_list *users)
                     char* keyword = add_keyword(sockfd, users, req->body);
                     if(has_match_ended(users, keyword, sockfd)){
                         post_request(buff,sockfd, "6_endgame.html");
-                        change_player_status(sockfd, users, COMPLETE);
+                        change_all_status(users, COMPLETE);
                     }
                     else{
                         char* keywords = return_all_keywords(user);
@@ -412,22 +413,22 @@ static bool handle_http_request(int sockfd, User_list *users)
         perror("write");
         return false;
     }
-    // printf("the numer of users is %d\n", users->n_users);
-    // for(int i=0; i < users->n_users; i++){
-    //     printf("USER ID %d", users->users[i]->id);
-    //     if(users->users[i]->status == READY){
-    //         printf("is ready\n");
-    //     }
-    //     if(users->users[i]->status == WAIT){
-    //         printf("is wait\n");
-    //     }
-    //     if(users->users[i]->status == QUIT){
-    //         printf("is quit\n");
-    //     }
-    //     if(users->users[i]->status == COMPLETE){
-    //         printf("is complete\n");
-    //     }
-    // }
+    printf("the numer of users is %d\n", users->n_users);
+    for(int i=0; i < users->n_users; i++){
+        printf("USER ID %d", users->users[i]->id);
+        if(users->users[i]->status == READY){
+            printf("is ready\n");
+        }
+        if(users->users[i]->status == WAIT){
+            printf("is wait\n");
+        }
+        if(users->users[i]->status == QUIT){
+            printf("is quit\n");
+        }
+        if(users->users[i]->status == COMPLETE){
+            printf("is complete\n");
+        }
+    }
 	free_request(req);
     return true;
 }

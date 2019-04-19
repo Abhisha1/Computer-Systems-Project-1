@@ -109,6 +109,12 @@ void change_player_status(int user_id, User_list* users, STATUS status){
     }
 }
 
+void change_all_status(User_list* users, STATUS status){
+    for(int i=0; i < users->n_users; i++){
+        users->users[i]->status = status;
+    }
+}
+
 int change_player_round(int user_id, User_list* users){
     int round = 1;
     for(int i=0; i < users->n_users; i++){

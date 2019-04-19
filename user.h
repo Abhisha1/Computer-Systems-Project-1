@@ -4,7 +4,8 @@ typedef enum
     READY,
     WAIT,
     QUIT,
-    COMPLETE
+    COMPLETE,
+    RESTART
 } STATUS;
 
 
@@ -42,6 +43,8 @@ bool should_player_quit(User_list* users);
 bool players_ready(User_list* users);
 
 void change_player_status(int user_id, User_list* users, STATUS status);
+
+void change_all_status(User_list* users, STATUS status);
 
 int change_player_round(int user_id, User_list* users);
 
