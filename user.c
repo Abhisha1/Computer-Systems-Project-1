@@ -109,6 +109,7 @@ void change_player_status(int user_id, User_list* users, STATUS status){
 }
 
 bool keyword_match(User* user, char* keyword){
+    printf("keyword is %s\n\n", keyword);
     for(int i=0; i <user->n_keywords;i++){
         printf("words being matched is with %s and %s\n", keyword, user->keywords[i]);
         if(strcmp(keyword, user->keywords[i]) == 0){

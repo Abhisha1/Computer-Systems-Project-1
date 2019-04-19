@@ -260,7 +260,7 @@ static bool handle_http_request(int sockfd, User_list *users)
                         text_render_request(buff,sockfd, "4_accepted.html", keywords);
                         free(keywords);
                     }
-                    free(keyword);
+                    // free(keyword);
                 }
             }
         }
