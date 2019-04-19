@@ -18,12 +18,12 @@ Request* parse_request(char* request_message){
     if (strncmp(request_message, "GET ", 4) == 0){
         req->method = GET;
         request_message += 4;
-        printf("Its a get\n");
+        // printf("Its a get\n");
     }
     else if (strncmp(request_message, "POST ", 5) == 0){
         request_message += 5;
         req->method = POST;
-        printf("Its a post\n");
+        // printf("Its a post\n");
     }
     req->url = strtok(request_message, " ");
     request_message += strlen(req->url)+1;

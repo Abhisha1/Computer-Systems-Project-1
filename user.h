@@ -43,7 +43,7 @@ bool players_ready(User_list* users);
 
 void change_player_status(int user_id, User_list* users, STATUS status);
 
-void change_player_round(int user_id, User_list* users);
+int change_player_round(int user_id, User_list* users);
 
 bool keyword_match(User* user, char* keyword);
 
@@ -53,6 +53,6 @@ bool has_match_ended(User_list* users, char* keyword, int id);
 
 bool player_won(User_list *users);
 
-User* get_current_user(User_list* users, char* keyword, int id);
+User* get_current_user(User_list* users, int id);
 
 char* return_all_keywords(User* user);

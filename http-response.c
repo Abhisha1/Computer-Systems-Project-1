@@ -45,10 +45,10 @@ char* parse_response(Response* response){
     strcat(response_string, response->phrase);
     strcat(response_string, "\r\n");
     char* headers = print_hash_map(response->header);
-    memcpy(response_string, headers, strlen(headers));
+    strncat(response_string, headers, strlen(headers));
     strcat(response_string, "\r\n");
     strcat(response_string, response->body);
-    free(headers);
+    // free(headers);
     return response_string;
 }
 

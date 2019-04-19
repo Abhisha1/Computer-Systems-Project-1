@@ -109,7 +109,8 @@ void change_player_status(int user_id, User_list* users, STATUS status){
     }
 }
 
-void change_player_round(int user_id, User_list* users){
+int change_player_round(int user_id, User_list* users){
+    int round = 1;
     for(int i=0; i < users->n_users; i++){
         if (users->users[i]->id == user_id){
             if (users->users[i]->round < 4){
@@ -118,8 +119,9 @@ void change_player_round(int user_id, User_list* users){
             else{
                 users->users[i]->round = 1;
             }
+            round = users->users[i]->round;
         }
-    }
+    }return round;
 }
 
 
@@ -162,7 +164,7 @@ bool player_won(User_list *users){
     return false;
 }
 
-User* get_current_user(User_list* users, char* keyword, int id){
+User* get_current_user(User_list* users, int id){
     User *user = NULL;
     for(int i=0; i < users->n_users; i++){
         if (users->users[i]->id == id){
@@ -174,7 +176,9 @@ User* get_current_user(User_list* users, char* keyword, int id){
 
 char* return_all_keywords(User* user){
     //RETURNS ADDRESS OF LOCAL VARIABLE
-    char *keywords = calloc(user->n_keywords*(INITIAL_KEYWORD_LENGTH+1), user->n_keywords);
+    printf("%d\n\n\n", user->n_keywords);
+    int length = (user->n_keywords)*(INITIAL_KEYWORD_LENGTH+1);
+    char *keywords = calloc(length, user->n_keywords);
     assert(keywords);
     for(int i=0; i< user->n_keywords; i++){
         strcat(keywords, user->keywords[i]);
