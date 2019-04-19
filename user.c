@@ -18,6 +18,7 @@ User* new_user(int id){
     user->n_keywords = 0;
     user->status = WAIT;
     user->keywords = calloc(user->n_capacity,sizeof(char*));
+    user->round = 0;
     assert(user->keywords);
     return user;
 }
@@ -107,6 +108,20 @@ void change_player_status(int user_id, User_list* users, STATUS status){
         }
     }
 }
+
+void change_player_round(int user_id, User_list* users){
+    for(int i=0; i < users->n_users; i++){
+        if (users->users[i]->id == user_id){
+            if (users->users[i]->round < 4){
+                users->users[i]->round++;
+            }
+            else{
+                users->users[i]->round = 1;
+            }
+        }
+    }
+}
+
 
 bool keyword_match(User* user, char* keyword){
     printf("keyword is %s\n\n", keyword);

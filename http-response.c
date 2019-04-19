@@ -27,8 +27,8 @@ Response* initialise_session(Request* request){
     resp->version = request->version;
     resp->phrase = "OK";
     resp->header = new_hash_table(2);
-    char *cook = cookie_generator();
-    hash_table_put(resp->header, "Set-cookie: ", cook);
+    char *cookie = cookie_generator();
+    hash_table_put(resp->header, "Set-cookie: ", cookie);
     resp->body="";
     return resp;
 }
@@ -44,14 +44,17 @@ char* parse_response(Response* response){
     strcat(response_string, " ");
     strcat(response_string, response->phrase);
     strcat(response_string, "\r\n");
-    strcat(response_string, print_hash_map(response->header));
+    char* headers = print_hash_map(response->header);
+    memcpy(response_string, headers, strlen(headers));
     strcat(response_string, "\r\n");
     strcat(response_string, response->body);
+    free(headers);
     return response_string;
 }
 
 
 void free_response(Response* resp){
+    free_cookie(resp->header);
     free_hash_table(resp->header);
     free(resp);
 }

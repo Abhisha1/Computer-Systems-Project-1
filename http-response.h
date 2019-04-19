@@ -17,5 +17,6 @@ char* parse_response(Response* response);
 
 char* cookie_generator();
 
+void free_response(Response* resp);
 
 Response* initialise_session(Request* request);
