@@ -22,7 +22,13 @@
 #include <unistd.h>
 #include "http-parser.h"
 #include "http-response.h"
+#include "hashtable.h"
 #include "user.h"
+
+#define ROUND_1 3
+#define ROUND_2 4
+#define ROUND_3 1
+#define ROUND_4 2
 
 // constants
 static char const * const HTTP_200_FORMAT = "HTTP/1.1 200 OK\r\n\
@@ -32,6 +38,8 @@ static char const * const HTTP_400 = "HTTP/1.1 400 Bad Request\r\nContent-Length
 static int const HTTP_400_LENGTH = 47;
 static char const * const HTTP_404 = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 static int const HTTP_404_LENGTH = 45;
+
+
 
 char *substring(char *string, int position, int length)
 {
@@ -287,8 +295,13 @@ static bool handle_http_request(int sockfd, User_list *users)
             // char* resp_string = parse_response(resp);
             // printf("COOKIE CREATING RESP %s\n", resp_string);
             // player_session(buff, sockfd, "1_welcome.html", resp_string);
+            // User* new_player = new_user(sockfd);
+            // add_user(new_player, users);
+            // char* cookie = hash_table_get(resp->header, "Set-cookie: ")+13;
+            // cookie = strtok(cookie, ";");
+            // printf("the cookie token is %s*****\n", cookie);
             // free(resp_string);
-            // free(resp); 
+            // free_response(resp); 
             User* new_player = new_user(sockfd);
             add_user(new_player, users);
             get_request(buff,sockfd, "1_welcome.html");

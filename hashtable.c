@@ -139,7 +139,8 @@ void move_to_front(Bucket *bucket, int index){
 /************************************************************************/
 char* hash_table_get(HashTable *table, char *key) {
 	/*Checks if key in hash table and returns value if present*/
-	char* freq = malloc(60*sizeof(char));
+	char* freq = calloc(60,sizeof(char));
+	assert(freq);
 	assert(table != NULL);
 	assert(key != NULL);
 
@@ -149,7 +150,7 @@ char* hash_table_get(HashTable *table, char *key) {
 	Bucket *bucket = &table->buckets[hash_value];
 	for (int i=0; i < bucket->n_elems; i++){
 		if (equal(bucket->keys[i], key)){
-			freq = bucket->values[i];
+			memcpy(freq, bucket->values[i], strlen(bucket->values[i]));
 			move_to_front(bucket, i);
 			break;
 		}
@@ -175,7 +176,8 @@ bool hash_table_has(HashTable *table, char *key) {
 	return false;
 }
 char* print_hash_map(HashTable *table){
-	char* headers = malloc(100*sizeof(char));
+	char* headers = calloc(100,sizeof(char));
+	assert(headers);
 	for (int i = 0; i < table->size; i++) {
 		if (table->buckets[i].n_elems > 0){
 			for (int j=0; j< table->buckets[i].n_elems; j++){
@@ -186,4 +188,20 @@ char* print_hash_map(HashTable *table){
 		}
 	}
 	return headers;
+}
+
+void free_cookie(HashTable *headers) {
+	/*Checks if key in hash table and returns value if present*/
+
+	assert(headers != NULL);
+
+	int hash_value = xor_hash("Set-cookie: ", headers->size);
+
+	// look for existing key
+	Bucket *bucket = &headers->buckets[hash_value];
+	for (int i=0; i < bucket->n_elems; i++){
+		if (equal(bucket->keys[i], "Set-cookie: ")){
+			free(bucket->values[i]);
+		}
+	}
 }

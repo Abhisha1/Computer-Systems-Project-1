@@ -15,6 +15,7 @@ typedef struct User {
     int n_keywords;
     STATUS status;
     int n_capacity;
+    int round;
 }User;
 
 typedef struct User_list{
@@ -41,6 +42,8 @@ bool should_player_quit(User_list* users);
 bool players_ready(User_list* users);
 
 void change_player_status(int user_id, User_list* users, STATUS status);
+
+void change_player_round(int user_id, User_list* users);
 
 bool keyword_match(User* user, char* keyword);
 
