@@ -1,3 +1,7 @@
+/**
+ * Written by Abhisha Nirmalathas 913405 for COMP30023 Project 1
+ * This program deals with all HTTP responses sent.
+ * */
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,11 +12,16 @@
 #include "http-parser.h"
 #include "http-response.h"
 
+// constants for responses
 #define MAX_URL_SIZE 60
 #define MAX_HEADER_SIZE 300
 #define MAX_VERSION_SIZE 10
+#define MAX_N_HEADERS 2
 
 char* cookie_generator(){
+    /**
+     * Creates a cookie token and formats it accordingly to HTTP
+     * */
     char* cookie_value;
     cookie_value = (char*) malloc(sizeof(char)*60);
     snprintf(cookie_value, 60, "sessionToken=%d; Expires=Wed, 01 Apr 2019 10:10:10 GMT", rand());
@@ -21,19 +30,31 @@ char* cookie_generator(){
 
 
 Response* initialise_session(Request* request){
+    /**
+     * Creates a new browser session for a user, where a cookie is created
+     * */
     Response *resp = calloc(1, sizeof *resp);
 	assert(resp);
+
+    // Sets the HTTP Response status code to a 200 OK
     resp->status_code=200;
     resp->version = request->version;
     resp->phrase = "OK";
-    resp->header = new_hash_table(2);
+    resp->header = new_hash_table(MAX_N_HEADERS);
+
+    // sets the cookies
     char *cookie = cookie_generator();
     hash_table_put(resp->header, "Set-cookie: ", cookie);
+
+    // sends empty body
     resp->body="";
     return resp;
 }
 
 char* parse_response(Response* response){
+    /**
+     * Parses a response and returns it as a string
+     * */
     char* response_string;
     char int_buff[4];
     response_string = calloc(100,sizeof(char));
@@ -54,6 +75,9 @@ char* parse_response(Response* response){
 
 
 void free_response(Response* resp){
+    /**
+     * Deallocates response memory
+     * */
     free_cookie(resp->header);
     free_hash_table(resp->header);
     free(resp);
