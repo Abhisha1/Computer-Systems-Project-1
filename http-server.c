@@ -231,28 +231,32 @@ static bool handle_http_request(int sockfd, User_list *users)
         printf("run\n\n\n\n\\n");
         change_player_status(sockfd,users, QUIT);
         request(buff,sockfd, "7_gameover.html");
+        // free_request(req);
+        // return false;
     }
     else if (strncmp(req->url, "/?start=Start", 24)  == 0){
         // printf("matches start");
         if (req->method == GET){
             change_player_status(sockfd, users, READY);
             int round = change_player_round(sockfd, users);
-            // printf("THIS IS ROUND NUMBER %d\n", round);
-            //get_request(buff, sockfd, "3_first_turn.html");
             game_change(buff,sockfd, "3_first_turn.html", round);
         }
         if (req->method == POST){
             if(strncmp(req->body, "keyword=", 8)  == 0){
-                if(player_won(users)){
-                    request(buff,sockfd, "6_endgame.html");
-                    change_all_status(users, RESTART);
-                }
-                else if(should_player_quit(users)){
+                if(should_player_quit(users)){
+                    printf("is quit");
                     change_player_status(sockfd,users, QUIT);
                     request(buff,sockfd, "7_gameover.html");
-                    free_request(req);
-                    keep_alive = 0;
-                    return false;
+                    // free_request(req);
+                    // keep_alive = 0;
+                    // return false;
+                }
+                else if (different_round_discard(sockfd,users)){
+                    game_change(buff,sockfd, "5_discarded.html", user->round);
+                }
+                else if(player_won(users)){
+                    request(buff,sockfd, "6_endgame.html");
+                    change_player_status(sockfd, users, WAIT);
                 }
                 else if(!players_ready(users) && user!= NULL){
                     game_change(buff,sockfd, "5_discarded.html", user->round);
@@ -268,11 +272,9 @@ static bool handle_http_request(int sockfd, User_list *users)
                         if(user!= NULL){
                             char* keywords = return_all_keywords(user);
                             text_render_game_play(buff,sockfd, "4_accepted.html", keywords, user->round);
-                            //text_render_request(buff, sockfd, "4_accepted.html", keywords);
                             free(keywords);
                         }
                     }
-                    // free(keyword);
                 }
             }
         }
@@ -455,8 +457,6 @@ int main(int argc, char * argv[])
             }
         }
     }
-    printf("exit loop\n");
     free_users(users);
-    printf("free users fun loop\n");
     return 0;
 }

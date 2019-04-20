@@ -48,6 +48,8 @@ void change_all_status(User_list* users, STATUS status);
 
 int change_player_round(int user_id, User_list* users);
 
+bool different_round_discard(int user_id, User_list* users);
+
 bool keyword_match(User* user, char* keyword);
 
 void reset_players(User_list *users);

@@ -69,9 +69,9 @@ void add_user(User* user, User_list* users){
 
 void free_users(User_list* users){
     for (int i=0; i <users->n_users; i++){
-        for(int j=0; j < users->users[i]->n_keywords; j++){
-            free(&users->users[i]->keywords[j]);
-        }
+        // for(int j=0; j < users->users[i]->n_keywords; j++){
+        //     free(&users->users[i]->keywords[j]);
+        // }
         free(users->users[i]->keywords);
         free(users->users[i]);
     }
@@ -131,6 +131,17 @@ int change_player_round(int user_id, User_list* users){
             round = users->users[i]->round;
         }
     }return round;
+}
+bool different_round_discard(int user_id,User_list* users){
+    User *user = get_current_user(users, user_id);
+    if (user != NULL && user->status ==READY){
+        for(int i=1; i< users->n_users; i++){
+            if(users->users[i]->round != users->users[i-1]->round){
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 bool keyword_match(User* user, char* keyword){
