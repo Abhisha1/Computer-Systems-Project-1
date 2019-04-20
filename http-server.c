@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <signal.h>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -20,15 +21,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "response-formatter.h"
 #include "http-parser.h"
 #include "http-response.h"
 #include "hashtable.h"
 #include "user.h"
 
-static char const ROUND_1='2';
-static char const ROUND_2='3';
-static char const ROUND_3='4';
-static char const ROUND_4='1';
 
 // constants
 static char const * const HTTP_200_FORMAT = "HTTP/1.1 200 OK\r\n\
@@ -39,35 +37,7 @@ static int const HTTP_400_LENGTH = 47;
 static char const * const HTTP_404 = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 static int const HTTP_404_LENGTH = 45;
 
-
-
-char *substring(char *string, int position, int length)
-{
-   char *p;
-   int c;
-   p = calloc(length+1, sizeof(char));
-   assert(p);
-    // printf("size of length %d\n", length);
-   for(c = 0 ; c < length ; c++ )
-      *(p+c) = *((string+position-1)+c);      
-       
-   *(p+c) = '\0';
- 
-   return p;
-}
-void insert_substring(char *a, char *b, int position)
-{
-   char *start, *end;
-   int length;
-   
-   length = strlen(a);
-   
-   start = substring(a, 1, position);      
-   end = substring(a, position+1, length-position);
-   sprintf(a, "%s%s%s", start, b, end);
-   free(start);
-   free(end);
-}
+static int keep_alive = 1;
 
 
 bool player_session(char* buff, int sockfd, char* file_name, char* response){
@@ -101,49 +71,6 @@ bool player_session(char* buff, int sockfd, char* file_name, char* response){
     close(filefd);
     return true;
 }
-bool get_request(char* buff, int sockfd, char* file_name){
-    // get the size of the file
-    struct stat st;
-    stat(file_name, &st);
-    int n = sprintf(buff, HTTP_200_FORMAT, st.st_size);
-    // send the header first
-    if (write(sockfd, buff, n) < 0)
-    {
-        perror("write");
-        return false;
-    }
-    // send the file
-    int filefd = open(file_name, O_RDONLY);
-    do
-    {
-        n = sendfile(sockfd, filefd, NULL, 2048);
-    }
-    while (n > 0);
-    if (n < 0)
-    {
-        perror("sendfile");
-        close(filefd);
-        return false;
-    }
-    close(filefd);
-    return true;
-}
-
-void clean_trailing_buffer(char* buff){
-    const char needle[10] = "</html>";
-    char *result = strstr(buff, needle)+strlen(needle);
-    int position = result - buff;
-    memcpy(buff, buff, position);
-}
-
-void render_text(char* buff, char* text){
-    const char new_needle[10] = "\">";
-    char* result = strstr(buff, new_needle)+strlen(new_needle);
-    int position = result - buff;
-    insert_substring(buff, text, position);
-}
-
-
 bool text_render_request(char *buff, int sockfd, char* file_name, char* text){
     char *user_name = calloc(200,sizeof(char));
     assert(user_name);
@@ -180,7 +107,7 @@ bool text_render_request(char *buff, int sockfd, char* file_name, char* text){
 	return true;
 }
 
-bool post_request(char *buff, int sockfd, char* file_name){
+bool request(char *buff, int sockfd, char* file_name){
     struct stat st;
     stat(file_name, &st);
     int n = sprintf(buff, HTTP_200_FORMAT, st.st_size);
@@ -207,30 +134,6 @@ bool post_request(char *buff, int sockfd, char* file_name){
         return false;
     }
 	return true;
-}
-
-void change_game_image(char* buff, int round){
-    const char needle[10] = "/image-";
-    char* result = strstr(buff, needle)+strlen(needle);
-    int position = result - buff;
-    switch (round){
-        case 1:
-            buff[position] = ROUND_1;
-            break;
-        case 2:
-            buff[position] = ROUND_2;
-            break;
-        case 3:
-            buff[position] = ROUND_3;
-            break;
-        case 4:
-            buff[position] = ROUND_4;
-            break;
-        default:
-            printf("Invalid Round");
-            break;
-
-    }
 }
 
 bool game_change(char* buff, int sockfd, char* file_name, int round){
@@ -323,11 +226,11 @@ static bool handle_http_request(int sockfd, User_list *users)
     // parse the method
     Request* req = parse_request(curr);
     User* user = get_current_user(users, sockfd);
-     printf("REQUEST BODY IS \n\n%s\n", req->body);
+     printf("REQUEST BODY IS \n\n%s\n", req->url);
     if(strncmp(req->body, "quit=Quit", 9)  == 0){
         printf("run\n\n\n\n\\n");
         change_player_status(sockfd,users, QUIT);
-        post_request(buff,sockfd, "7_gameover.html");
+        request(buff,sockfd, "7_gameover.html");
     }
     else if (strncmp(req->url, "/?start=Start", 24)  == 0){
         // printf("matches start");
@@ -335,34 +238,39 @@ static bool handle_http_request(int sockfd, User_list *users)
             change_player_status(sockfd, users, READY);
             int round = change_player_round(sockfd, users);
             // printf("THIS IS ROUND NUMBER %d\n", round);
-            get_request(buff, sockfd, "3_first_turn.html");
-           // game_change(buff,sockfd, "3_first_turn.html", round);
+            //get_request(buff, sockfd, "3_first_turn.html");
+            game_change(buff,sockfd, "3_first_turn.html", round);
         }
         if (req->method == POST){
             if(strncmp(req->body, "keyword=", 8)  == 0){
                 if(player_won(users)){
-                    post_request(buff,sockfd, "6_endgame.html");
+                    request(buff,sockfd, "6_endgame.html");
                     change_all_status(users, RESTART);
                 }
                 else if(should_player_quit(users)){
                     change_player_status(sockfd,users, QUIT);
-                    post_request(buff,sockfd, "7_gameover.html");
+                    request(buff,sockfd, "7_gameover.html");
+                    free_request(req);
+                    keep_alive = 0;
+                    return false;
                 }
-                else if(!players_ready(users)){
-                   // game_change(buff,sockfd, "5_discarded.html", user->round);
-                    post_request(buff,sockfd, "5_discarded.html");
+                else if(!players_ready(users) && user!= NULL){
+                    game_change(buff,sockfd, "5_discarded.html", user->round);
+                    //request(buff,sockfd, "5_discarded.html");
                 }
                 else{
                     char* keyword = add_keyword(sockfd, users, req->body);
                     if(has_match_ended(users, keyword, sockfd)){
-                        post_request(buff,sockfd, "6_endgame.html");
+                        request(buff,sockfd, "6_endgame.html");
                         change_all_status(users, COMPLETE);
                     }
                     else{
-                        char* keywords = return_all_keywords(user);
-                        text_render_request(buff, sockfd, "4_accepted.html", keywords);
-                       // text_render_game_play(buff,sockfd, "4_accepted.html", keywords, user->round);
-                        free(keywords);
+                        if(user!= NULL){
+                            char* keywords = return_all_keywords(user);
+                            text_render_game_play(buff,sockfd, "4_accepted.html", keywords, user->round);
+                            //text_render_request(buff, sockfd, "4_accepted.html", keywords);
+                            free(keywords);
+                        }
                     }
                     // free(keyword);
                 }
@@ -398,9 +306,14 @@ static bool handle_http_request(int sockfd, User_list *users)
             // printf("the cookie token is %s*****\n", cookie);
             // free(resp_string);
             // free_response(resp); 
+            for(int i =0; i< users->n_users; i++){
+                if(sockfd == users->users[i]->id){
+                    return false;
+                }
+            }
             User* new_player = new_user(sockfd);
             add_user(new_player, users);
-            get_request(buff,sockfd, "1_welcome.html");
+            request(buff,sockfd, "1_welcome.html");
         }
         else
             // never used, just for completeness
@@ -428,10 +341,21 @@ static bool handle_http_request(int sockfd, User_list *users)
         if(users->users[i]->status == COMPLETE){
             printf("is complete\n");
         }
+        if(users->users[i]->status == RESTART){
+            printf("is restart\n");
+        }
     }
 	free_request(req);
     return true;
 }
+
+void exit_handler();
+
+void exit_handler(){
+    printf("break loop");
+    keep_alive = 0;
+}
+
 
 int main(int argc, char * argv[])
 {
@@ -481,7 +405,8 @@ int main(int argc, char * argv[])
     // record the maximum socket number
     int maxfd = sockfd;
     User_list* users = initialise_player_list();
-    while (1)
+    signal(SIGINT, exit_handler);
+    while (keep_alive)
     {
         // monitor file descriptors
         fd_set readfds = masterfds;
@@ -530,6 +455,8 @@ int main(int argc, char * argv[])
             }
         }
     }
-   free(users);
+    printf("exit loop\n");
+    free_users(users);
+    printf("free users fun loop\n");
     return 0;
 }

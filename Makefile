@@ -2,7 +2,7 @@ CC     = gcc
 CFLAGS = -Wall -std=c99 -g
 # modify the flags here ^
 EXE    = image_tagger
-OBJ    = hashtable.o user.o http-parser.o http-response.o http-server.o
+OBJ    = response-formatter.o hashtable.o user.o http-parser.o http-response.o http-server.o
 # add any new object files here ^
 # top (default) target
 all: $(EXE)

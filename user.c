@@ -69,6 +69,9 @@ void add_user(User* user, User_list* users){
 
 void free_users(User_list* users){
     for (int i=0; i <users->n_users; i++){
+        for(int j=0; j < users->users[i]->n_keywords; j++){
+            free(&users->users[i]->keywords[j]);
+        }
         free(users->users[i]->keywords);
         free(users->users[i]);
     }
@@ -129,7 +132,6 @@ int change_player_round(int user_id, User_list* users){
         }
     }return round;
 }
-
 
 bool keyword_match(User* user, char* keyword){
     printf("keyword is %s\n\n", keyword);
