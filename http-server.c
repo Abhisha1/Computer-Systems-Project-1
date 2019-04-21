@@ -264,7 +264,7 @@ static bool handle_http_request(int sockfd, User_list *user_list){
 
     // user starting game 
     else if (strncmp(req->url, "/?start=Start", 24)  == 0){
-        // printf("THE COOKIE IS %s\n", hash_table_get(req->header, "Cookie: "));
+        printf("THE COOKIE ID IS %d\n", id);
         // user on first turn
         if (user != NULL){
             if (req->method == GET){
@@ -352,13 +352,13 @@ static bool handle_http_request(int sockfd, User_list *user_list){
             Response* resp = initialise_session(req);
             char* resp_string = parse_response(resp);
             // printf("COOKIE CREATING RESP %s\n", resp_string);
-            char* cookie = hash_table_get(resp->header, "Set-cookie: ")+3;
+            char* cookie = hash_table_get(resp->header, "Set-cookie: ");
             // printf("the cookie token is %s*****\n", cookie);
-            User* new_player = new_user(atoi(cookie));
+            User* new_player = new_user(atoi(cookie+3));
             add_user(new_player, user_list);
             // printf("before player sesh");
             player_session(buff, sockfd, "1_welcome.html", resp_string);
-            // free(cookie);
+            free(cookie);
             free(resp_string);
             free_response(resp); 
 
@@ -409,6 +409,7 @@ static bool handle_http_request(int sockfd, User_list *user_list){
             printf("is restart\n");
         }
     }
+    free(cookie);
 	free_request(req);
     return true;
 }

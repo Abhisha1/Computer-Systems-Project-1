@@ -54,7 +54,6 @@ Request* parse_request(char* request_message){
     
     }
     request_message += strcspn(request_message, "\r\n")+2;
-    printf("request header %s\n", print_hash_map(req->header));
     // parses the body
     if(*request_message != '\r'||*request_message != '\n'){
         req->body = request_message;
@@ -75,7 +74,6 @@ char* insert_headers(char* request_message, Request * req){
         request_message += field_len+1;
         size_t value_len = strcspn(request_message, "\r\n");
         memcpy(header_value,request_message, value_len);
-       printf("header key: %s\n", header_field_name);
        request_message += value_len+2;
        hash_table_put(req->header, header_field_name, header_value);
        return request_message;
