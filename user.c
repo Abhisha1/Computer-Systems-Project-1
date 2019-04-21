@@ -108,6 +108,7 @@ void free_users(User_list* user_list){
         //     free(&users->users[i]->keywords[j]);
         // }
         free(user_list->users[i]->keywords);
+        free(user_list->users[i]->name);
         free(user_list->users[i]);
     }
     free(user_list->users);
@@ -200,11 +201,8 @@ bool keyword_match(User* user, char* keyword){
     /**
      * Checks if keyword has already been submitted
      * */
-    printf("keyword is %s\n\n", keyword);
     for(int i=0; i <user->n_keywords;i++){
-        printf("words being matched is with %s and %s\n", keyword, user->keywords[i]);
         if(strcmp(keyword, user->keywords[i]) == 0){
-            printf("match is with %s and %s\n", keyword, user->keywords[i]);
             return true;
         }
     }

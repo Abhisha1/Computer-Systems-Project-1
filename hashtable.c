@@ -110,7 +110,6 @@ void hash_table_put(HashTable *table, char *key, char *value) {
 	int hash_value = xor_hash(key, table->size);
 	// look for existing key
 	Bucket *bucket = &table->buckets[hash_value];
-	printf("the number of elements in bucket is %d\n", bucket->n_elems);
 	for (int i=0; i < bucket->n_elems; i++){
 		if (equal(bucket->keys[i], key)){
 			bucket->values[i] = value;
@@ -120,7 +119,6 @@ void hash_table_put(HashTable *table, char *key, char *value) {
 	// adds key and value as not in hash table
 	bucket = add_to_bucket(bucket, key, value);
 	table->buckets[hash_value] = *bucket;
-	printf("the number of elements in bucket is %d\n", bucket->n_elems);
 }
 /************************************************************************/
 void move_to_front(Bucket *bucket, int index){

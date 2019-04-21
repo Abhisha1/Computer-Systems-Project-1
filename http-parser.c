@@ -97,5 +97,5 @@ void free_request(Request* req){
      * */
     free_hash_map(req->header);
     free_hash_table(req->header);
-    // free(req);
+    free(req);
 }
