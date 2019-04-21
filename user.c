@@ -130,7 +130,12 @@ bool players_ready(User_list* user_list){
      * checks if all players are ready
      * */
     for(int i=0; i < user_list->n_users; i++){
+        // other player is not ready
         if (user_list->users[i]->status != READY){
+            return false;
+        }
+        // only one player, need to wait
+        else if (user_list->n_users == 1){
             return false;
         }
     }
@@ -265,7 +270,7 @@ char* return_all_keywords(User* user){
      * */
     printf("%d\n\n\n", user->n_keywords);
     
-    int length = (user->n_keywords)*(INITIAL_KEYWORD_LENGTH+1);
+    int length = (user->n_keywords)*(INITIAL_KEYWORD_LENGTH+3);
     char *keywords = calloc(length, user->n_keywords);
     assert(keywords);
 

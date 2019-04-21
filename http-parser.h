@@ -28,3 +28,5 @@ Request* parse_request(char* request_message);
 
 // Deallocates memory
 void free_request(Request* req);
+
+char* insert_headers(char* request_message, Request * req);

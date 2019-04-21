@@ -16,7 +16,7 @@
 #define MAX_URL_SIZE 60
 #define MAX_HEADER_SIZE 300
 #define MAX_VERSION_SIZE 10
-#define MAX_N_HEADERS 2
+#define MAX_N_HEADERS 4
 
 char* cookie_generator(){
     /**
@@ -24,7 +24,7 @@ char* cookie_generator(){
      * */
     char* cookie_value;
     cookie_value = (char*) malloc(sizeof(char)*60);
-    snprintf(cookie_value, 60, "sessionToken=%d; Expires=Wed, 01 Apr 2019 10:10:10 GMT", rand());
+    snprintf(cookie_value, 60, "id=%d", rand() % (111-0+1));
     return cookie_value;
 }
 
@@ -44,7 +44,9 @@ Response* initialise_session(Request* request){
 
     // sets the cookies
     char *cookie = cookie_generator();
+    hash_table_put(resp->header, "Content-length: ", "%ld");
     hash_table_put(resp->header, "Set-cookie: ", cookie);
+    hash_table_put(resp->header, "Content-type: ", "text/html");
 
     // sends empty body
     resp->body="";
@@ -69,8 +71,14 @@ char* parse_response(Response* response){
     strncat(response_string, headers, strlen(headers));
     strcat(response_string, "\r\n");
     strcat(response_string, response->body);
-    // free(headers);
-    return response_string;
+    strcat(response_string, "\r\n");
+    char * new_response_string = calloc(100,sizeof(char));
+    assert(new_response_string);
+    strncpy(new_response_string, response_string, strlen(response_string));
+    free(headers);
+    free(response_string);
+    return new_response_string;
+    // return response_string;
 }
 
 

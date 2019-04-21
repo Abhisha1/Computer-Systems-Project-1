@@ -26,3 +26,5 @@ bool hash_table_has(HashTable *table, char *key);
 char* print_hash_map(HashTable *table);
 
 void free_cookie(HashTable *headers);
+
+void free_hash_map(HashTable *table);

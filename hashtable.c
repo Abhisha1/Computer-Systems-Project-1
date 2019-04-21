@@ -54,6 +54,8 @@ Bucket *add_to_bucket(Bucket *bucket, char *key, char *value) {
 	//adds new key and avlue to end of bucket
 	bucket->values[bucket->n_elems-1] = value;
 	bucket->keys[bucket->n_elems-1] = key;
+	// printf("key is %s\n\n", bucket->keys[bucket->n_elems-1]);
+	// printf("value is %s\n\n", bucket->values[bucket->n_elems-1]);
 	return bucket;
 }
 /************************************************************************/
@@ -108,17 +110,17 @@ void hash_table_put(HashTable *table, char *key, char *value) {
 	int hash_value = xor_hash(key, table->size);
 	// look for existing key
 	Bucket *bucket = &table->buckets[hash_value];
+	printf("the number of elements in bucket is %d\n", bucket->n_elems);
 	for (int i=0; i < bucket->n_elems; i++){
 		if (equal(bucket->keys[i], key)){
 			bucket->values[i] = value;
-			move_to_front(bucket, i);
 			return;
 		}
 	}
 	// adds key and value as not in hash table
 	bucket = add_to_bucket(bucket, key, value);
 	table->buckets[hash_value] = *bucket;
-	move_to_front(bucket, bucket->n_elems - 1);
+	printf("the number of elements in bucket is %d\n", bucket->n_elems);
 }
 /************************************************************************/
 void move_to_front(Bucket *bucket, int index){
@@ -176,7 +178,7 @@ bool hash_table_has(HashTable *table, char *key) {
 	return false;
 }
 char* print_hash_map(HashTable *table){
-	char* headers = calloc(100,sizeof(char));
+	char* headers = calloc(800,sizeof(char));
 	assert(headers);
 	for (int i = 0; i < table->size; i++) {
 		if (table->buckets[i].n_elems > 0){
@@ -202,6 +204,17 @@ void free_cookie(HashTable *headers) {
 	for (int i=0; i < bucket->n_elems; i++){
 		if (equal(bucket->keys[i], "Set-cookie: ")){
 			free(bucket->values[i]);
+		}
+	}
+}
+
+void free_hash_map(HashTable *table){
+	for (int i = 0; i < table->size; i++) {
+		if (table->buckets[i].n_elems > 0){
+			for (int j=0; j< table->buckets[i].n_elems; j++){
+				free(table->buckets[i].keys[j]);
+				free(table->buckets[i].values[j]);
+			}
 		}
 	}
 }
