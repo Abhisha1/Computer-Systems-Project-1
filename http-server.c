@@ -249,7 +249,7 @@ static bool handle_http_request(int sockfd, User_list *user_list){
     // parse the method
     // printf("REQUEST IS \n\n%s\n", buff);
     req = parse_request(curr);
-    char* cookie = hash_table_get(req->header, "Cookie:")+3;
+    char* cookie = hash_table_get(req->header, "Cookie:");
     int id = atoi(cookie+3);
     User* user = get_current_user(user_list, id);
     // user should quit game
@@ -375,6 +375,7 @@ static bool handle_http_request(int sockfd, User_list *user_list){
         else if (req->method == GET){
             if (user != NULL){
                 printf("name of user is %s\n", user->name);
+                // Resets returning user to round 1
                 text_render_response(buff,sockfd, "2_start.html", user->name);
             }
         }
@@ -386,7 +387,6 @@ static bool handle_http_request(int sockfd, User_list *user_list){
     else if (write(sockfd, HTTP_404, HTTP_404_LENGTH) < 0)
     {
         free_request(req);
-        free(cookie);
         perror("write");
         return false;
     }
@@ -409,7 +409,6 @@ static bool handle_http_request(int sockfd, User_list *user_list){
             printf("is restart\n");
         }
     }
-    free(cookie);
 	free_request(req);
     return true;
 }

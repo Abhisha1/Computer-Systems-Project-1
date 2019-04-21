@@ -51,17 +51,7 @@ Request* parse_request(char* request_message){
     // char *header_value = calloc(MAX_HEADER_SIZE, sizeof(char));
     while(*request_message != '\r' && *request_message != '\n'){
         request_message = insert_headers(request_message, req);
-    //    printf("req message first char %d\n", *request_message);
-    //     memset(header_field_name,0,strlen(header_field_name));
-    //     memset(header_value,0,strlen(header_value));
-    //     size_t field_len = strcspn(request_message, " ");
-    //     memcpy(header_field_name, request_message,field_len);
-    //     request_message += field_len+1;
-    //     size_t value_len = strcspn(request_message, "\r\n");
-    //     memcpy(header_value,request_message, value_len);
-    //    printf("header key: %s\n", header_field_name);
-    //    request_message += value_len+2;
-    //    hash_table_put(req->header, header_field_name, header_value);
+    
     }
     request_message += strcspn(request_message, "\r\n")+2;
     printf("request header %s\n", print_hash_map(req->header));
