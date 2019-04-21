@@ -40,7 +40,7 @@ static int const HTTP_400_LENGTH = 47;
 static char const * const HTTP_404 = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 static int const HTTP_404_LENGTH = 45;
 
-int keep_alive = 1;
+volatile sig_atomic_t kill;
 
 
 bool player_session(char* buff, int sockfd, char* file_name, char* response){
@@ -392,11 +392,11 @@ static bool handle_http_request(int sockfd, User_list *users){
     return true;
 }
 
-static void exit_handler(int sig){
+void exit_handler(int signum){
     /**
      * Closes TCP Connection
     */
-    keep_alive = 0;
+    kill = 1;
     printf("keep alive changed");
 }
 
@@ -453,7 +453,7 @@ int main(int argc, char * argv[])
     // game players
     User_list* users = initialise_player_list();
     signal(SIGINT, exit_handler);
-    while (keep_alive)
+    while (!kill)
     {
         // monitor file descriptors
         fd_set readfds = masterfds;
