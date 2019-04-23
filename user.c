@@ -12,7 +12,7 @@
 
 // implementation specific constants for users
 #define INITIAL_KEYWORDS 5
-#define INITAL_N_USERS 5
+#define INITAL_N_USERS 10
 #define INITIAL_KEYWORD_LENGTH 30
 
 User* new_user(int id){
@@ -119,10 +119,15 @@ bool should_player_quit(User_list* user_list){
     /**
      * Checks if any player has quit, and tells player to quit if so 
      * */
+    int count = 0;
     for(int i=0; i < user_list->n_users; i++){
         if (user_list->users[i]->status == QUIT){
-            return true;
+            count++;
         }
+    }
+    // checking edge case of 3 users, with one inactive user that has quit
+    if(count + 1 == user_list->n_users){
+        return true;
     }
     return false;
 }
