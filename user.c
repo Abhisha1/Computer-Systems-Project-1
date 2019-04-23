@@ -11,7 +11,7 @@
 #include "user.h"
 
 // implementation specific constants for users
-#define INITIAL_KEYWORDS 5
+#define INITIAL_KEYWORDS 20
 #define INITAL_N_USERS 10
 #define INITIAL_KEYWORD_LENGTH 30
 
@@ -135,15 +135,19 @@ bool players_ready(User_list* user_list){
     /**
      * checks if all players are ready
      * */
+    int count =0;
     for(int i=0; i < user_list->n_users; i++){
         // other player is not ready
         if (user_list->users[i]->status != READY){
-            return false;
+            count++;
         }
         // only one player, need to wait
         else if (user_list->n_users == 1){
             return false;
         }
+    }
+    if(count + 1 == user_list->n_users){
+        return false;
     }
     return true;
 }
