@@ -41,14 +41,10 @@ static int const HTTP_400_LENGTH = 47;
 static char const * const HTTP_404 = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 static int const HTTP_404_LENGTH = 45;
 
-<<<<<<< http-server.c
 // global structures required for memory deallocation
 static Request* req;
 static User_list* user_list;
 int keep_alive = 1;
-=======
-volatile sig_atomic_t kill;
->>>>>>> http-server.c
 
 
 bool player_session(char* buff, int sockfd, char* file_name, char* response){
@@ -379,15 +375,10 @@ void exit_handler(int signum){
     /**
      * Closes TCP Connection
     */
-<<<<<<< http-server.c
     keep_alive = 0;
     if (user_list){
         free_users(user_list);
     }
-=======
-    kill = 1;
-    printf("keep alive changed");
->>>>>>> http-server.c
 }
 
 
