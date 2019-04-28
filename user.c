@@ -60,9 +60,6 @@ void resize_keywords(User* user, char* keyword){
     // adds keyword to user
     user->keywords[user->n_keywords] = keyword;
     user->n_keywords++;
-    for(int j=0; j<user->n_keywords; j++){
-        printf("%d: %s\n",j, user->keywords[j]);
-    }
 }
 
 
@@ -275,7 +272,6 @@ char* return_all_keywords(User* user){
     /**
      * Returns all the keywords for a particular user
      * */
-    printf("%d\n\n\n", user->n_keywords);
     
     int length = (user->n_keywords)*(INITIAL_KEYWORD_LENGTH+3);
     char *keywords = calloc(length, user->n_keywords);
@@ -288,6 +284,5 @@ char* return_all_keywords(User* user){
     }
     // terminating byte
     keywords[strlen(keywords)-1] = '\0';
-    printf("**** %s \n   ", keywords);
     return keywords;
 }

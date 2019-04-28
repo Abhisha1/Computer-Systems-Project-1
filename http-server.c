@@ -53,7 +53,6 @@ bool player_session(char* buff, int sockfd, char* file_name, char* response){
      * */
     struct stat st;
     stat(file_name, &st);
-    // printf("pre add %s\n", buff);
     int n = sprintf(buff, response, st.st_size);
     // send the header first
     if (write(sockfd, buff, n) < 0)
@@ -380,7 +379,6 @@ static void exit_handler(int sig){
     if (user_list){
         free_users(user_list);
     }
-    printf("keep alive changed");
 }
 
 
@@ -416,6 +414,7 @@ int main(int argc, char * argv[])
     // if ip parameter is not specified
     serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
     serv_addr.sin_port = htons(atoi(argv[2]));
+    printf("image_tagger server is now running at IP: %s on port %s\n", argv[1], argv[2]);
     // bind address to socket
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
