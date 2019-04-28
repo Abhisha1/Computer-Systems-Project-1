@@ -435,7 +435,7 @@ int main(int argc, char * argv[])
     // game players
     user_list = initialise_player_list();
     signal(SIGINT, exit_handler);
-    while (!kill)
+    while (keep_alive)
     {
         // monitor file descriptors
         fd_set readfds = masterfds;
