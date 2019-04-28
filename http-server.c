@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "response-formatter.h"
+#include "hashtable.h"
 #include "http-parser.h"
 #include "http-response.h"
 #include "hashtable.h"
@@ -40,7 +41,10 @@ static int const HTTP_400_LENGTH = 47;
 static char const * const HTTP_404 = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 static int const HTTP_404_LENGTH = 45;
 
-volatile sig_atomic_t kill;
+// global structures required for memory deallocation
+static Request* req;
+static User_list* user_list;
+int keep_alive = 1;
 
 
 bool player_session(char* buff, int sockfd, char* file_name, char* response){
@@ -56,21 +60,23 @@ bool player_session(char* buff, int sockfd, char* file_name, char* response){
         perror("write");
         return false;
     }
-    // send the file
+    // read the content of the HTML file
     int filefd = open(file_name, O_RDONLY);
-    do
-    {
-        n = sendfile(sockfd, filefd, NULL, 2048);
-    }
-    while (n > 0);
+    n = read(filefd, buff, st.st_size);
+    clean_trailing_buffer(buff);
     if (n < 0)
     {
-        perror("sendfile");
+        perror("read");
         close(filefd);
         return false;
     }
     close(filefd);
-    return true;
+    if (write(sockfd, buff, st.st_size) < 0)
+    {
+        perror("write");
+        return false;
+    }
+	return true;
 }
 bool text_render_response(char *buff, int sockfd, char* file_name, char* text){
     /**
@@ -220,7 +226,7 @@ bool text_render_game_play(char *buff, int sockfd, char* file_name, char* text, 
 	return true;
 }
 
-static bool handle_http_request(int sockfd, User_list *users){
+static bool handle_http_request(int sockfd, User_list *user_list){
     /**
      * Parses the http request and sends the approapriate response
      * */
@@ -241,71 +247,66 @@ static bool handle_http_request(int sockfd, User_list *users){
 
     char * curr = buff;
     // parse the method
-    Request* req = parse_request(curr);
-    User* user = get_current_user(users, sockfd);
-    // printf("REQUEST BODY IS \n\n%s\n", req->url);
-
+    req = parse_request(curr);
+    char* cookie = hash_table_get(req->header, "Cookie:");
+    int id = atoi(cookie+3);
+    User* user = get_current_user(user_list, id);
     // user should quit game
     if(strncmp(req->body, "quit=Quit", 9)  == 0){
-        printf("run\n\n\n\n\\n");
-        change_player_status(sockfd,users, QUIT);
-        response(buff,sockfd, "7_gameover.html");
-        // free_request(req);
-        // return false;
+        if (user != NULL){
+            change_player_status(id,user_list, QUIT);
+            response(buff,sockfd, "7_gameover.html");
+        }
     }
 
     // user starting game 
     else if (strncmp(req->url, "/?start=Start", 24)  == 0){
-        
         // user on first turn
-        if (req->method == GET){
-            change_player_status(sockfd, users, READY);
-            int round = change_player_round(sockfd, users);
-            game_change(buff,sockfd, "3_first_turn.html", round);
-        }
-        if (req->method == POST){
-            if(strncmp(req->body, "keyword=", 8)  == 0){
+        if (user != NULL){
+            if (req->method == GET){
+                change_player_status(id, user_list, READY);
+                int round = change_player_round(id, user_list);
+                game_change(buff,sockfd, "3_first_turn.html", round);
+            }
+            if (req->method == POST){
+                if(strncmp(req->body, "keyword=", 8)  == 0){
 
-                // checks if other player has quit
-                if(should_player_quit(users)){
-                    printf("is quit");
-                    change_player_status(sockfd,users, QUIT);
-                    response(buff,sockfd, "7_gameover.html");
-                    // free_request(req);
-                    // keep_alive = 0;
-                    // return false;
-                }
+                    // checks if other player has quit
+                    if(should_player_quit(user_list)){
+                        change_player_status(id,user_list, QUIT);
+                        response(buff,sockfd, "7_gameover.html");
+                    }
 
-                // checks if other player has not completed previous round
-                else if (different_round_discard(sockfd,users)){
-                    game_change(buff,sockfd, "5_discarded.html", user->round);
-                }
+                    // checks if other player has not completed previous round
+                    else if (different_round_discard(id,user_list)){
+                        game_change(buff,sockfd, "5_discarded.html", user->round);
+                    }
 
-                // checks if game won
-                else if(player_won(users)){
-                    response(buff,sockfd, "6_endgame.html");
-                    change_player_status(sockfd, users, WAIT);
-                }
-
-                //checks if the other player is not ready and discards keyword
-                else if(!players_ready(users) && user!= NULL){
-                    game_change(buff,sockfd, "5_discarded.html", user->round);
-                    //request(buff,sockfd, "5_discarded.html");
-                }
-                else{
-                    char* keyword = add_keyword(sockfd, users, req->body);
-
-                    // game ends as submitted keyword has been submitted by other player
-                    if(has_match_ended(users, keyword, sockfd)){
+                    // checks if game won
+                    else if(player_won(user_list)){
                         response(buff,sockfd, "6_endgame.html");
-                        change_all_status(users, COMPLETE);
+                        change_player_status(id, user_list, WAIT);
+                    }
+
+                    //checks if the other player is not ready and discards keyword
+                    else if(!players_ready(user_list) && user!= NULL){
+                        game_change(buff,sockfd, "5_discarded.html", user->round);
+                        //request(buff,sockfd, "5_discarded.html");
                     }
                     else{
-                        // keyword hasn't been submitted yet so is accepted and rendered on screen
-                        if(user!= NULL){
-                            char* keywords = return_all_keywords(user);
-                            text_render_game_play(buff,sockfd, "4_accepted.html", keywords, user->round);
-                            free(keywords);
+                        char* keyword = add_keyword(id, user_list, req->body);
+                        // game ends as submitted keyword has been submitted by other player
+                        if(has_match_ended(user_list, keyword, id)){
+                            response(buff,sockfd, "6_endgame.html");
+                            change_all_status(user_list, COMPLETE);
+                        }
+                        else{
+                            // keyword hasn't been submitted yet so is accepted and rendered on screen
+                            if(user!= NULL){
+                                char* keywords = return_all_keywords(user);
+                                text_render_game_play(buff,sockfd, "4_accepted.html", keywords, user->round);
+                                free(keywords);
+                            }
                         }
                     }
                 }
@@ -319,44 +320,40 @@ static bool handle_http_request(int sockfd, User_list *users){
         // user's name stored and rendered on screen
         if (req->method == POST)
         {
-           char *name = strchr(req->body, '=')+1;
-            // printf("**%s**\n", name);
+            size_t name_len = strlen(req->body+5);
+            char *name = calloc(name_len+1, sizeof(char));
+           assert(name);
+           memcpy(name,req->body+5, name_len);
             if (name != NULL){
-                 for (int i=0; i < users->n_users; i++){
-                     if(users->users[i]->id == sockfd){
-                         users->users[i]->name = name;
+                 for (int i=0; i < user_list->n_users; i++){
+                     if(user_list->users[i]->id == id){
+                        user_list->users[i]->name = name;
                      }
                  }
-                // get_request(buff,sockfd, "2_start.html");
                text_render_response(buff,sockfd, "2_start.html", req->body+5);
             }
         }
 
-        // user is created
-        else if (req->method == GET)
+        // new user is created
+        else if (req->method == GET && !hash_table_has(req->header, "Cookie:"))
         {
-            // printf("matches a / url but url isize is %zu\n\n", strlen(req->url));
-            // Response* resp = initialise_session(req);
-            // char* resp_string = parse_response(resp);
-            // printf("COOKIE CREATING RESP %s\n", resp_string);
-            // player_session(buff, sockfd, "1_welcome.html", resp_string);
-            // User* new_player = new_user(sockfd);
-            // add_user(new_player, users);
-            // char* cookie = hash_table_get(resp->header, "Set-cookie: ")+13;
-            // cookie = strtok(cookie, ";");
-            // printf("the cookie token is %s*****\n", cookie);
-            // free(resp_string);
-            // free_response(resp); 
-
-            // ensures user is not already playing/in system
-            for(int i =0; i< users->n_users; i++){
-                if(sockfd == users->users[i]->id){
-                    return false;
-                }
+            // create a new user and assign it a new cookie
+            Response* resp = initialise_session(req);
+            char* resp_string = parse_response(resp);
+            char* cookie = hash_table_get(resp->header, "Set-cookie: ");
+            User* new_player = new_user(atoi(cookie+3));
+            add_user(new_player, user_list);
+            player_session(buff, sockfd, "1_welcome.html", resp_string);
+            free(cookie);
+            free(resp_string);
+            free_response(resp); 
+        }
+        else if (req->method == GET){
+            if (user != NULL){
+                // Resets returning user to round 1
+                user->round = 0;
+                text_render_response(buff,sockfd, "2_start.html", user->name);
             }
-            User* new_player = new_user(sockfd);
-            add_user(new_player, users);
-            response(buff,sockfd, "1_welcome.html");
         }
         else
             // unrecognised methods
@@ -369,25 +366,7 @@ static bool handle_http_request(int sockfd, User_list *users){
         perror("write");
         return false;
     }
-    printf("the numer of users is %d\n", users->n_users);
-    for(int i=0; i < users->n_users; i++){
-        printf("USER ID %d", users->users[i]->id);
-        if(users->users[i]->status == READY){
-            printf("is ready\n");
-        }
-        if(users->users[i]->status == WAIT){
-            printf("is wait\n");
-        }
-        if(users->users[i]->status == QUIT){
-            printf("is quit\n");
-        }
-        if(users->users[i]->status == COMPLETE){
-            printf("is complete\n");
-        }
-        if(users->users[i]->status == RESTART){
-            printf("is restart\n");
-        }
-    }
+    free(cookie);
 	free_request(req);
     return true;
 }
@@ -396,8 +375,10 @@ void exit_handler(int signum){
     /**
      * Closes TCP Connection
     */
-    kill = 1;
-    printf("keep alive changed");
+    keep_alive = 0;
+    if (user_list){
+        free_users(user_list);
+    }
 }
 
 
@@ -433,6 +414,7 @@ int main(int argc, char * argv[])
     // if ip parameter is not specified
     serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
     serv_addr.sin_port = htons(atoi(argv[2]));
+    printf("image_tagger server is now running at IP: %s on port %s\n", argv[1], argv[2]);
     // bind address to socket
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
@@ -451,7 +433,7 @@ int main(int argc, char * argv[])
     int maxfd = sockfd;
 
     // game players
-    User_list* users = initialise_player_list();
+    user_list = initialise_player_list();
     signal(SIGINT, exit_handler);
     while (!kill)
     {
@@ -494,7 +476,7 @@ int main(int argc, char * argv[])
                     }
                 }
                 // a request is sent from the client
-                else if (!handle_http_request(i,users))
+                else if (!handle_http_request(i,user_list))
                 {
                     close(i);
                     FD_CLR(i, &masterfds);
@@ -502,7 +484,5 @@ int main(int argc, char * argv[])
             }
         }
     }
-    printf("break loop");
-    free_users(users);
     return 0;
 }

@@ -11,8 +11,8 @@
 #include "user.h"
 
 // implementation specific constants for users
-#define INITIAL_KEYWORDS 5
-#define INITAL_N_USERS 5
+#define INITIAL_KEYWORDS 20
+#define INITAL_N_USERS 10
 #define INITIAL_KEYWORD_LENGTH 30
 
 User* new_user(int id){
@@ -60,9 +60,6 @@ void resize_keywords(User* user, char* keyword){
     // adds keyword to user
     user->keywords[user->n_keywords] = keyword;
     user->n_keywords++;
-    for(int j=0; j<user->n_keywords; j++){
-        printf("%d: %s\n",j, user->keywords[j]);
-    }
 }
 
 
@@ -108,6 +105,7 @@ void free_users(User_list* user_list){
         //     free(&users->users[i]->keywords[j]);
         // }
         free(user_list->users[i]->keywords);
+        free(user_list->users[i]->name);
         free(user_list->users[i]);
     }
     free(user_list->users);
@@ -118,10 +116,15 @@ bool should_player_quit(User_list* user_list){
     /**
      * Checks if any player has quit, and tells player to quit if so 
      * */
+    int count = 0;
     for(int i=0; i < user_list->n_users; i++){
         if (user_list->users[i]->status == QUIT){
-            return true;
+            count++;
         }
+    }
+    // checking edge case of 3 users, with one inactive user that has quit
+    if(count + 1 == user_list->n_users){
+        return true;
     }
     return false;
 }
@@ -129,10 +132,19 @@ bool players_ready(User_list* user_list){
     /**
      * checks if all players are ready
      * */
+    int count =0;
     for(int i=0; i < user_list->n_users; i++){
+        // other player is not ready
         if (user_list->users[i]->status != READY){
+            count++;
+        }
+        // only one player, need to wait
+        else if (user_list->n_users == 1){
             return false;
         }
+    }
+    if(count + 1 == user_list->n_users){
+        return false;
     }
     return true;
 }
@@ -195,11 +207,8 @@ bool keyword_match(User* user, char* keyword){
     /**
      * Checks if keyword has already been submitted
      * */
-    printf("keyword is %s\n\n", keyword);
     for(int i=0; i <user->n_keywords;i++){
-        printf("words being matched is with %s and %s\n", keyword, user->keywords[i]);
         if(strcmp(keyword, user->keywords[i]) == 0){
-            printf("match is with %s and %s\n", keyword, user->keywords[i]);
             return true;
         }
     }
@@ -263,9 +272,8 @@ char* return_all_keywords(User* user){
     /**
      * Returns all the keywords for a particular user
      * */
-    printf("%d\n\n\n", user->n_keywords);
     
-    int length = (user->n_keywords)*(INITIAL_KEYWORD_LENGTH+1);
+    int length = (user->n_keywords)*(INITIAL_KEYWORD_LENGTH+3);
     char *keywords = calloc(length, user->n_keywords);
     assert(keywords);
 
@@ -276,6 +284,5 @@ char* return_all_keywords(User* user){
     }
     // terminating byte
     keywords[strlen(keywords)-1] = '\0';
-    printf("**** %s \n   ", keywords);
     return keywords;
 }
